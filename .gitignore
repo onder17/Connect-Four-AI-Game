@@ -1,0 +1,37 @@
+# Python Cache (Önbellek Dosyaları)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments (Sanal Ortamlar - Varsa)
+venv/
+env/
+.venv/
+
+# VS Code ve İşletim Sistemi Kalıntıları
+.vscode/
+.DS_Store# Python Cache (Önbellek Dosyaları)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments (Sanal Ortamlar - Varsa)
+venv/
+env/
+.venv/
+
+# VS Code ve İşletim Sistemi Kalıntıları
+.vscode/
+.DS_Store# Python Cache (Önbellek Dosyaları)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments (Sanal Ortamlar - Varsa)
+venv/
+env/
+.venv/
+
+# VS Code ve İşletim Sistemi Kalıntıları
+.vscode/
+.DS_Store
