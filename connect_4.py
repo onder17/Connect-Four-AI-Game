@@ -3,6 +3,7 @@ import random
 import pygame
 import sys
 import math
+import cv2
 
 BLUE = (0,0,255)
 BLACK = (0,0,0)
@@ -213,14 +214,88 @@ def draw_board(board):
                 pygame.draw.circle(screen, YELLOW, (int(c*SQUARESIZE+SQUARESIZE/2), height-int(r*SQUARESIZE+SQUARESIZE/2)), RADIUS)
     pygame.display.update()
 
+def play_intro_video(video_path):
+    global fullscreen, screen, bg_image, game_bg_image, about_bg_image
+    
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print(f"Hata: {video_path} dosyası açılamadı.")
+        return
+
+    # Video FPS değerini al
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    if fps == 0:
+        fps = 30
+    clock = pygame.time.Clock()
+
+    # OpenCV sesi çalmaz, bu yüzden Pygame ile ses dosyasını oynatmayı deniyoruz
+    try:
+        pygame.mixer.music.load("videos/intro_voice.ogg")
+        pygame.mixer.music.play()
+    except Exception as e:
+        print(f"Video sesi oynatılamadı: {e}")
+
+    while cap.isOpened():
+        ret, frame = cap.read()
+        
+        # Video bittiyse (ret False dönerse) döngüden çık
+        if not ret:
+            break
+
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        
+        if fullscreen:
+            info = pygame.display.Info()
+            frame = cv2.resize(frame, (info.current_w, info.current_h))
+        else:
+            frame = cv2.resize(frame, (width, height))
+            
+        surf = pygame.image.frombuffer(frame.tobytes(), frame.shape[1::-1], "RGB")
+        
+        screen.blit(surf, (0, 0))
+        pygame.display.update()
+
+        skip_video = False
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                cap.release()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key in [pygame.K_ESCAPE, pygame.K_SPACE, pygame.K_RETURN]:
+                    skip_video = True
+                    break
+                # Video izlerken F11'e basılırsa
+                if event.key == pygame.K_F11:
+                    fullscreen = not fullscreen
+                    if fullscreen:
+                        screen = pygame.display.set_mode(size, pygame.FULLSCREEN | pygame.SCALED)
+                        info = pygame.display.Info()
+                        bg_image = pygame.transform.scale(original_bg_image, (info.current_w, info.current_h))
+                        game_bg_image = pygame.transform.scale(original_game_bg_image, (info.current_w, info.current_h))
+                        about_bg_image = pygame.transform.scale(original_about_bg_image, (info.current_w, info.current_h))
+                    else:
+                        screen = pygame.display.set_mode(size , pygame.SCALED)
+                        bg_image = pygame.transform.scale(original_bg_image, (width,height))
+                        game_bg_image = pygame.transform.scale(original_game_bg_image, (width,height))
+                        about_bg_image = pygame.transform.scale(original_about_bg_image, (width,height))
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                skip_video = True
+                break
+                
+        if skip_video:
+            # Kullanıcı videoyu geçerse müziği durdur
+            pygame.mixer.music.stop()
+            break
+
+        clock.tick(fps)
+
+    cap.release()
+    # Intro bittiğinde intro müziğini/sesini kesin durdur
+    pygame.mixer.music.stop()
+
 pygame.init()
 
 pygame.mixer.init() #voice system initializing
-
-#main game music
-pygame.mixer.music.load("sounds/connect_4_music.mpeg.ogg")
-pygame.mixer.music.set_volume(0.2)
-pygame.mixer.music.play(-1)
 
 #rock falling effect
 drop_sound = pygame.mixer.Sound("sounds/drop.wav")
@@ -248,14 +323,34 @@ state = "MENU" #initialize from main menu
 volume_level = 0.2
 fullscreen = False #change with F11
 
-bg_image = pygame.image.load("images/bg_image_jpg.jpeg").convert()
-bg_image = pygame.transform.scale(bg_image, (width,height))
+original_bg_image = pygame.image.load("images/bg_image_new.png").convert()
+bg_image = pygame.transform.scale(original_bg_image, (width,height))
 
-game_bg_image = pygame.image.load("images/bg_image_gameplay.jpeg").convert()
-game_bg_image = pygame.transform.scale(game_bg_image, (width,height))
+original_game_bg_image = pygame.image.load("images/bg_image_gameplay.jpeg").convert()
+game_bg_image = pygame.transform.scale(original_game_bg_image, (width,height))
+
+# About ekranı için resmi yükleme
+original_about_bg_image = pygame.image.load("images/bg_image_about.jpeg").convert()
+about_bg_image = pygame.transform.scale(original_about_bg_image, (width,height))
 
 #variables initialites manuel
-board, game_over, turn = reset_game()
+board = create_board()
+game_over = False
+turn = random.randint(PLAYER, AI)
+
+# 1. ÖNCE İNTRO VİDEOSUNU OYNAT (Ses ve Video)
+play_intro_video("videos/intro_video.mp4")
+
+# Mouse'a dokunmaya gerek kalmadan Ana Menünün hemen render alması için sahte tetikleme olayı
+pygame.event.post(pygame.event.Event(pygame.USEREVENT))
+
+# 2. İNTRO BİTTİKTEN SONRA ANA MENÜ MÜZİĞİNİ YÜKLE VE BAŞLAT
+try:
+    pygame.mixer.music.load("sounds/connect_4_music.mpeg.ogg")
+    pygame.mixer.music.set_volume(0.2)
+    pygame.mixer.music.play(-1)
+except pygame.error as e:
+    print(f"Menü müziği yüklenemedi: {e}")
 
 while True: #infinity loop structure
 
@@ -269,43 +364,57 @@ while True: #infinity loop structure
                 fullscreen = not fullscreen
                 if fullscreen:
                     screen = pygame.display.set_mode(size, pygame.FULLSCREEN | pygame.SCALED)
+                    info = pygame.display.Info()
+                    bg_image = pygame.transform.scale(original_bg_image, (info.current_w, info.current_h))
+                    game_bg_image = pygame.transform.scale(original_game_bg_image, (info.current_w, info.current_h))
+                    about_bg_image = pygame.transform.scale(original_about_bg_image, (info.current_w, info.current_h))
                 else:
                     screen = pygame.display.set_mode(size , pygame.SCALED)
+                    bg_image = pygame.transform.scale(original_bg_image, (width,height))
+                    game_bg_image = pygame.transform.scale(original_game_bg_image, (width,height))
+                    about_bg_image = pygame.transform.scale(original_about_bg_image, (width,height))
                 #update and adapt to matrix belong to screen changing
                 if state == "PLAYING":
                     draw_board(board)
+                    pygame.display.update()
+                elif state == "ABOUT":
+                    screen.blit(about_bg_image, (0,0))
                     pygame.display.update()
 
         #state 1 : main menu
         if state == "MENU":
             screen.blit(bg_image , (0,0))
             
-            title = menu_font.render("CONNECT 4 AI", 1, BLUE)
-            screen.blit(title, (width/2 - title.get_width()/2, 100))
-            
-            pygame.draw.rect(screen, RED, (width/2 - 100, 250, 200, 60), border_radius=10)
+            # Y koordinatları butonların sığması için yeniden düzenlendi
+            pygame.draw.rect(screen, RED, (width/2 - 100, 200, 200, 60), border_radius=10)
             play_text = button_font.render("PLAY", 1, BLACK)
-            screen.blit(play_text, (width/2 - play_text.get_width()/2, 265))
+            screen.blit(play_text, (width/2 - play_text.get_width()/2, 215))
             
-            pygame.draw.rect(screen, YELLOW, (width/2 - 100, 350, 200, 60), border_radius=10)
+            pygame.draw.rect(screen, YELLOW, (width/2 - 100, 290, 200, 60), border_radius=10)
             set_text = button_font.render("SETTINGS", 1, BLACK)
-            screen.blit(set_text, (width/2 - set_text.get_width()/2, 365))
+            screen.blit(set_text, (width/2 - set_text.get_width()/2, 305))
+
+            pygame.draw.rect(screen, BLUE, (width/2 - 100, 380, 200, 60), border_radius=10)
+            about_text = button_font.render("ABOUT", 1, BLACK)
+            screen.blit(about_text, (width/2 - about_text.get_width()/2, 395))
             
-            pygame.draw.rect(screen, (100, 100, 100), (width/2 - 100, 450, 200, 60), border_radius=10)
+            pygame.draw.rect(screen, (100, 100, 100), (width/2 - 100, 470, 200, 60), border_radius=10)
             quit_text = button_font.render("QUIT", 1, BLACK)
-            screen.blit(quit_text, (width/2 - quit_text.get_width()/2, 465))
+            screen.blit(quit_text, (width/2 - quit_text.get_width()/2, 485))
             
             pygame.display.update()
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 posx, posy = event.pos
                 if (width/2 - 100 <= posx <= width/2 + 100):
-                    if (250 <= posy <= 310): 
+                    if (200 <= posy <= 260): 
                         board, game_over, turn = reset_game() #reset everything
                         state = "PLAYING"
-                    elif (350 <= posy <= 410): 
+                    elif (290 <= posy <= 350): 
                         state = "SETTINGS"
-                    elif (450 <= posy <= 510): # QUIT'e basıldı
+                    elif (380 <= posy <= 440): 
+                        state = "ABOUT"
+                    elif (470 <= posy <= 530): # QUIT'e basıldı
                         state = "QUIT_CONFIRM"
 
         #state 2 : settings part
@@ -341,6 +450,22 @@ while True: #infinity loop structure
                     volume_level = min(1.0, volume_level + 0.1)
                     pygame.mixer.music.set_volume(volume_level)
                 elif (width/2 - 100 <= posx <= width/2 + 100) and (450 <= posy <= 510):
+                    state = "MENU"
+
+        #state for ABOUT screen
+        elif state == "ABOUT":
+            screen.blit(about_bg_image, (0,0))
+            
+            # BACK butonu (En alt kısma yerleştirildi)
+            pygame.draw.rect(screen, RED, (width/2 - 100, height - 100, 200, 60), border_radius=10)
+            back_text = button_font.render("BACK", 1, BLACK)
+            screen.blit(back_text, (width/2 - back_text.get_width()/2, height - 85))
+            
+            pygame.display.update()
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                posx, posy = event.pos
+                if (width/2 - 100 <= posx <= width/2 + 100) and (height - 100 <= posy <= height - 40):
                     state = "MENU"
 
         #state 3 : gameplay screen
