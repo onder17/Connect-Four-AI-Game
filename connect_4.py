@@ -16,10 +16,29 @@ move_counter = 1
 session_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 current_dataset_file = f"datasets/dataset_{session_timestamp}.json"
 
+playlist = [
+    "sounds/connect_4_music.mpeg.ogg", 
+    "sounds/point_of_maximum_force.mpeg.ogg",
+    "sounds/where_the_soil_holds.mpeg.ogg",
+    "sounds/a_quiet_reckoning_mpeg.ogg",
+    "sounds/silence_on_peak.mpeg.ogg",
+    "sounds/general_last_war.mpeg.ogg",
+    "sounds/the_final_gambit.mpeg.ogg",
+    "sounds/reborn.mpeg.ogg",
+    "sounds/final_stage.mpeg.ogg",
+    "sounds/just_tears.mpeg.ogg"
+]
+
+current_track_index = random.randint(0, len(playlist) - 1)
+is_music_paused = False
+MUSIC_END = pygame.USEREVENT + 1
+
 BLUE = (0,0,255)
 BLACK = (0,0,0)
 RED = (255,0,0)
 YELLOW = (255,255,0)
+GREEN = (0, 255, 0)
+WHITE = (255, 255, 255)
 
 ROW_COUNT = 6
 COLUMN_COUNT = 7
@@ -234,12 +253,22 @@ def draw_board(board):
                 pygame.draw.circle(screen, YELLOW, (int(c*SQUARESIZE+SQUARESIZE/2), height-int(r*SQUARESIZE+SQUARESIZE/2)), RADIUS)
     pygame.display.update()
 
+def draw_button_with_hover(surface, text, font, rect_vals, color, hover_color, text_color):
+    mx, my = pygame.mouse.get_pos()
+    rect = pygame.Rect(rect_vals)
+    if rect.collidepoint((mx, my)):
+        pygame.draw.rect(surface, hover_color, rect.inflate(8, 8), border_radius=10)
+    else:
+        pygame.draw.rect(surface, color, rect, border_radius=10)
+    rendered_text = font.render(text, 1, text_color)
+    surface.blit(rendered_text, (rect.x + rect.width/2 - rendered_text.get_width()/2, rect.y + rect.height/2 - rendered_text.get_height()/2))
+
 def play_intro_video(video_path):
     global fullscreen, screen, bg_image, game_bg_image, about_bg_image
     
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
-        print(f"Hata: {video_path} dosyası açılamadı.")
+        print(f"Hata: {video_path} file does not exist.")
         return
 
     #video fps value
@@ -253,7 +282,7 @@ def play_intro_video(video_path):
         pygame.mixer.music.load("videos/intro_voice.ogg")
         pygame.mixer.music.play()
     except Exception as e:
-        print(f"Video sesi oynatılamadı: {e}")
+        print(f"video voice does not available: {e}")
 
     while cap.isOpened():
         ret, frame = cap.read()
@@ -290,14 +319,14 @@ def play_intro_video(video_path):
                     if fullscreen:
                         screen = pygame.display.set_mode(size, pygame.FULLSCREEN | pygame.SCALED)
                         info = pygame.display.Info()
-                        bg_image = pygame.transform.scale(original_bg_image, (info.current_w, info.current_h))
-                        game_bg_image = pygame.transform.scale(original_game_bg_image, (info.current_w, info.current_h))
-                        about_bg_image = pygame.transform.scale(original_about_bg_image, (info.current_w, info.current_h))
+                        bg_image = pygame.transform.smoothscale(original_bg_image, (info.current_w, info.current_h))
+                        game_bg_image = pygame.transform.smoothscale(original_game_bg_image, (info.current_w, info.current_h))
+                        about_bg_image = pygame.transform.smoothscale(original_about_bg_image, (info.current_w, info.current_h))
                     else:
                         screen = pygame.display.set_mode(size , pygame.SCALED)
-                        bg_image = pygame.transform.scale(original_bg_image, (width,height))
-                        game_bg_image = pygame.transform.scale(original_game_bg_image, (width,height))
-                        about_bg_image = pygame.transform.scale(original_about_bg_image, (width,height))
+                        bg_image = pygame.transform.smoothscale(original_bg_image, (width,height))
+                        game_bg_image = pygame.transform.smoothscale(original_game_bg_image, (width,height))
+                        about_bg_image = pygame.transform.smoothscale(original_about_bg_image, (width,height))
             if event.type == pygame.MOUSEBUTTONDOWN:
                 skip_video = True
                 break
@@ -332,6 +361,14 @@ RADIUS = int(SQUARESIZE/2 - 5)
 
 screen = pygame.display.set_mode(size , pygame.SCALED)
 
+#window title & icon settings
+pygame.display.set_caption("Connect Wars: 4")
+try:
+    icon_image = pygame.image.load("images/pixel_sword.png")
+    pygame.display.set_icon(icon_image)
+except Exception as e:
+    print(f"Game icon does not seen: {e}")
+
 myfont = pygame.font.SysFont("monospace", 75)
 button_font = pygame.font.SysFont("monospace", 30) #small size for button
 menu_font = pygame.font.SysFont("monospace", 60) #Menu Titles
@@ -344,14 +381,13 @@ volume_level = 0.2
 fullscreen = False #change with F11
 
 original_bg_image = pygame.image.load("images/bg_image_new.png").convert()
-bg_image = pygame.transform.scale(original_bg_image, (width,height))
+bg_image = pygame.transform.smoothscale(original_bg_image, (width,height))
 
 original_game_bg_image = pygame.image.load("images/bg_image_gameplay.jpeg").convert()
-game_bg_image = pygame.transform.scale(original_game_bg_image, (width,height))
+game_bg_image = pygame.transform.smoothscale(original_game_bg_image, (width,height))
 
-# About ekranı için resmi yükleme
 original_about_bg_image = pygame.image.load("images/bg_image_about.jpeg").convert()
-about_bg_image = pygame.transform.scale(original_about_bg_image, (width,height))
+about_bg_image = pygame.transform.smoothscale(original_about_bg_image, (width,height))
 
 #variables initialites manuel
 board = create_board()
@@ -366,9 +402,10 @@ pygame.event.post(pygame.event.Event(pygame.USEREVENT))
 
 # 2.main menu music after the intro is over
 try:
-    pygame.mixer.music.load("sounds/connect_4_music.mpeg.ogg")
-    pygame.mixer.music.set_volume(0.2)
-    pygame.mixer.music.play(-1)
+    pygame.mixer.music.load(playlist[current_track_index])
+    pygame.mixer.music.set_volume(volume_level)
+    pygame.mixer.music.play(0)
+    pygame.mixer.music.set_endevent(MUSIC_END)
 except pygame.error as e:
     print(f"Main menu music did not upload: {e}")
 
@@ -378,6 +415,11 @@ while True: #infinity loop structure
         if event.type == pygame.QUIT:
             sys.exit()
 
+        if event.type == MUSIC_END:
+            current_track_index = (current_track_index + 1) % len(playlist)
+            pygame.mixer.music.load(playlist[current_track_index])
+            pygame.mixer.music.play(0)
+
         #f11 function - for fullscreen
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_F11:
@@ -385,14 +427,14 @@ while True: #infinity loop structure
                 if fullscreen:
                     screen = pygame.display.set_mode(size, pygame.FULLSCREEN | pygame.SCALED)
                     info = pygame.display.Info()
-                    bg_image = pygame.transform.scale(original_bg_image, (info.current_w, info.current_h))
-                    game_bg_image = pygame.transform.scale(original_game_bg_image, (info.current_w, info.current_h))
-                    about_bg_image = pygame.transform.scale(original_about_bg_image, (info.current_w, info.current_h))
+                    bg_image = pygame.transform.smoothscale(original_bg_image, (info.current_w, info.current_h))
+                    game_bg_image = pygame.transform.smoothscale(original_game_bg_image, (info.current_w, info.current_h))
+                    about_bg_image = pygame.transform.smoothscale(original_about_bg_image, (info.current_w, info.current_h))
                 else:
                     screen = pygame.display.set_mode(size , pygame.SCALED)
-                    bg_image = pygame.transform.scale(original_bg_image, (width,height))
-                    game_bg_image = pygame.transform.scale(original_game_bg_image, (width,height))
-                    about_bg_image = pygame.transform.scale(original_about_bg_image, (width,height))
+                    bg_image = pygame.transform.smoothscale(original_bg_image, (width,height))
+                    game_bg_image = pygame.transform.smoothscale(original_game_bg_image, (width,height))
+                    about_bg_image = pygame.transform.smoothscale(original_about_bg_image, (width,height))
                 #update and adapt to matrix belong to screen changing
                 if state == "PLAYING":
                     draw_board(board)
@@ -406,21 +448,13 @@ while True: #infinity loop structure
             screen.blit(bg_image , (0,0))
             
             #fixed sizes for buttons
-            pygame.draw.rect(screen, RED, (width/2 - 100, 200, 200, 60), border_radius=10)
-            play_text = button_font.render("PLAY", 1, BLACK)
-            screen.blit(play_text, (width/2 - play_text.get_width()/2, 215))
+            draw_button_with_hover(screen, "PLAY", button_font, (width/2 - 100, 200, 200, 60), RED, (255, 100, 100), BLACK)
             
-            pygame.draw.rect(screen, YELLOW, (width/2 - 100, 290, 200, 60), border_radius=10)
-            set_text = button_font.render("SETTINGS", 1, BLACK)
-            screen.blit(set_text, (width/2 - set_text.get_width()/2, 305))
+            draw_button_with_hover(screen, "SETTINGS", button_font, (width/2 - 100, 290, 200, 60), YELLOW, (255, 255, 150), BLACK)
 
-            pygame.draw.rect(screen, BLUE, (width/2 - 100, 380, 200, 60), border_radius=10)
-            about_text = button_font.render("ABOUT", 1, BLACK)
-            screen.blit(about_text, (width/2 - about_text.get_width()/2, 395))
+            draw_button_with_hover(screen, "ABOUT", button_font, (width/2 - 100, 380, 200, 60), BLUE, (100, 100, 255), BLACK)
             
-            pygame.draw.rect(screen, (100, 100, 100), (width/2 - 100, 470, 200, 60), border_radius=10)
-            quit_text = button_font.render("QUIT", 1, BLACK)
-            screen.blit(quit_text, (width/2 - quit_text.get_width()/2, 485))
+            draw_button_with_hover(screen, "QUIT", button_font, (width/2 - 100, 470, 200, 60), (100, 100, 100), (150, 150, 150), BLACK)
             
             pygame.display.update()
 
@@ -441,35 +475,68 @@ while True: #infinity loop structure
         elif state == "SETTINGS":
             screen.blit(bg_image , (0,0))
             
+            #dimming overlay
+            overlay = pygame.Surface((width, height), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 160)) #the value of 160 is transparent (0= full transparent, 255=pitch black)
+            screen.blit(overlay, (0, 0))
+            
+            #shaded title
+            title_shadow = menu_font.render("SETTINGS", 1, BLACK)
+            screen.blit(title_shadow, (width/2 - title_shadow.get_width()/2 + 4, 84))
             title = menu_font.render("SETTINGS", 1, YELLOW)
-            screen.blit(title, (width/2 - title.get_width()/2, 100))
+            screen.blit(title, (width/2 - title.get_width()/2, 80))
             
-            vol_text = button_font.render(f"Music Volume: {int(volume_level*100)}%", 1, RED)
-            screen.blit(vol_text, (width/2 - vol_text.get_width()/2, 250))
+            #white color
+            vol_text = button_font.render(f"Music Volume: {int(volume_level*100)}%", 1, (255, 255, 255))
+            screen.blit(vol_text, (width/2 - vol_text.get_width()/2, 180))
             
-            pygame.draw.rect(screen, BLUE, (width/2 - 100, 320, 60, 60), border_radius=10)
-            minus_text = menu_font.render("-", 1, BLACK)
-            screen.blit(minus_text, (width/2 - 80, 320))
+            draw_button_with_hover(screen, "-", menu_font, (width/2 - 100, 230, 60, 60), BLUE, (100, 100, 255), BLACK)
             
-            pygame.draw.rect(screen, BLUE, (width/2 + 40, 320, 60, 60), border_radius=10)
-            plus_text = menu_font.render("+", 1, BLACK)
-            screen.blit(plus_text, (width/2 + 55, 320))
+            draw_button_with_hover(screen, "+", menu_font, (width/2 + 40, 230, 60, 60), BLUE, (100, 100, 255), BLACK)
+
+            #white color
+            track_text = button_font.render(f"Track: {current_track_index + 1} / {len(playlist)}", 1, (255, 255, 255))
+            screen.blit(track_text, (width/2 - track_text.get_width()/2, 330))
+
+            draw_button_with_hover(screen, "<", menu_font, (width/2 - 100, 380, 60, 60), YELLOW, (255, 255, 150), BLACK)
             
-            pygame.draw.rect(screen, RED, (width/2 - 100, 450, 200, 60), border_radius=10)
-            back_text = button_font.render("BACK", 1, BLACK)
-            screen.blit(back_text, (width/2 - back_text.get_width()/2, 465))
+            draw_button_with_hover(screen, ">", menu_font, (width/2 + 40, 380, 60, 60), YELLOW, (255, 255, 150), BLACK)
+
+            pp_color = BLACK if not is_music_paused else GREEN
+            pp_hover = (50, 50, 50) if not is_music_paused else (50, 255, 50)
+            pp_text_str = "PAUSE" if not is_music_paused else "CONTINUE"
+            pp_text_color = WHITE if not is_music_paused else BLACK
+            draw_button_with_hover(screen, pp_text_str, button_font, (width/2 - 100, 450, 200, 60), pp_color, pp_hover, pp_text_color)
+            
+            draw_button_with_hover(screen, "BACK", button_font, (width/2 - 100, 530, 200, 60), RED, (255, 100, 100), BLACK)
             
             pygame.display.update()
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 posx, posy = event.pos
-                if (width/2 - 100 <= posx <= width/2 - 40) and (320 <= posy <= 380):
+                if (width/2 - 100 <= posx <= width/2 - 40) and (230 <= posy <= 290):
                     volume_level = max(0.0, volume_level - 0.1)
                     pygame.mixer.music.set_volume(volume_level)
-                elif (width/2 + 40 <= posx <= width/2 + 100) and (320 <= posy <= 380):
+                elif (width/2 + 40 <= posx <= width/2 + 100) and (230 <= posy <= 290):
                     volume_level = min(1.0, volume_level + 0.1)
                     pygame.mixer.music.set_volume(volume_level)
+                elif (width/2 - 100 <= posx <= width/2 - 40) and (380 <= posy <= 440):
+                    current_track_index = (current_track_index - 1) % len(playlist)
+                    pygame.mixer.music.load(playlist[current_track_index])
+                    pygame.mixer.music.play(0)
+                    is_music_paused = False
+                elif (width/2 + 40 <= posx <= width/2 + 100) and (380 <= posy <= 440):
+                    current_track_index = (current_track_index + 1) % len(playlist)
+                    pygame.mixer.music.load(playlist[current_track_index])
+                    pygame.mixer.music.play(0)
+                    is_music_paused = False
                 elif (width/2 - 100 <= posx <= width/2 + 100) and (450 <= posy <= 510):
+                    is_music_paused = not is_music_paused
+                    if is_music_paused:
+                        pygame.mixer.music.pause()
+                    else:
+                        pygame.mixer.music.unpause()
+                elif (width/2 - 100 <= posx <= width/2 + 100) and (530 <= posy <= 590):
                     state = "MENU"
 
         #state for ABOUT screen
@@ -477,9 +544,7 @@ while True: #infinity loop structure
             screen.blit(about_bg_image, (0,0))
             
             #back button - at the bottom
-            pygame.draw.rect(screen, RED, (width/2 - 100, height - 100, 200, 60), border_radius=10)
-            back_text = button_font.render("BACK", 1, BLACK)
-            screen.blit(back_text, (width/2 - back_text.get_width()/2, height - 85))
+            draw_button_with_hover(screen, "BACK", button_font, (width/2 - 100, height - 100, 200, 60), RED, (255, 100, 100), BLACK)
             
             pygame.display.update()
 
@@ -493,14 +558,10 @@ while True: #infinity loop structure
             #scenario 1: game over - wait for rematch option
             if game_over:
                 #rematch button - top_right
-                pygame.draw.rect(screen, (0, 200, 0), (width - 130, 30, 110, 40), border_radius=10)
-                text = top_button_font.render("REMATCH", 1, BLACK)
-                screen.blit(text, (width - 120, 40))
+                draw_button_with_hover(screen, "REMATCH", top_button_font, (width - 130, 30, 110, 40), (0, 200, 0), (50, 255, 50), BLACK)
                 
                 #main menu button - red
-                pygame.draw.rect(screen, RED, (20, 30, 120, 40), border_radius=10)
-                m_text = top_button_font.render("MENU", 1, BLACK)
-                screen.blit(m_text, (20 + (60 - m_text.get_width()/2), 40))
+                draw_button_with_hover(screen, "MENU", top_button_font, (20, 30, 120, 40), RED, (255, 100, 100), BLACK)
                 
                 pygame.display.update()
 
@@ -552,14 +613,10 @@ while True: #infinity loop structure
             screen.blit(question, (width/2 - question.get_width()/2, 200))
             
             # YES Button (Green)
-            pygame.draw.rect(screen, (0,200,0), (width/2 - 150, 350, 120, 60), border_radius=10)
-            yes_text = button_font.render("YES", 1, BLACK)
-            screen.blit(yes_text, (width/2 - 150 + (60 - yes_text.get_width()/2), 365))
+            draw_button_with_hover(screen, "YES", button_font, (width/2 - 150, 350, 120, 60), (0, 200, 0), (50, 255, 50), BLACK)
             
             # NO Button (Red)
-            pygame.draw.rect(screen, RED, (width/2 + 30, 350, 120, 60), border_radius=10)
-            no_text = button_font.render("NO", 1, BLACK)
-            screen.blit(no_text, (width/2 + 30 + (60 - no_text.get_width()/2), 365))
+            draw_button_with_hover(screen, "NO", button_font, (width/2 + 30, 350, 120, 60), RED, (255, 100, 100), BLACK)
             
             pygame.display.update()
 
