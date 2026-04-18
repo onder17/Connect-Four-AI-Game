@@ -5,6 +5,8 @@ import sys
 import math
 import cv2
 import json
+import csv
+import os
 from datetime import datetime
 
 # Defined list for log processes
@@ -15,6 +17,60 @@ move_counter = 1
 # Instance output: dataset_20260413_154530.json
 session_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 current_dataset_file = f"datasets/dataset_{session_timestamp}.json"
+
+# -------------------------------------------------------------------
+# CONTINUOUS CSV INTEGRATION
+# Appends to a single CSV file across all sessions.
+# Header row is written automatically if the file does not exist.
+# -------------------------------------------------------------------
+CSV_DIR = "datasets"
+CONTINUOUS_CSV_FILE = os.path.join(CSV_DIR, "continuous_gameplay_log.csv")
+
+# CSV column headers — structured for machine learning training
+CSV_HEADERS = [
+    "session_id",        # Session identifier (timestamp-based)
+    "game_number",       # Game index within the session
+    "move_number",       # Move number within the game
+    "player",            # Player who made the move (PLAYER / AI_Warrior)
+    "match_type",        # Match type (PVE / PVP)
+    "game_mode",         # Game mode (CLASSIC / CONQUER)
+    "difficulty",        # AI difficulty level
+    "chosen_column",     # Column selected for the move
+    "minimax_score",     # Minimax calculated score
+    "ai_explanation",    # AI decision explanation
+    "p1_towers",         # Remaining towers for Player 1 (CONQUER mode)
+    "p2_towers",         # Remaining towers for Player 2 / AI (CONQUER mode)
+    "board_flat",        # Board state flattened to 42 comma-separated cells
+    "timestamp"          # Timestamp of the move
+]
+
+# Session identifier — created once when the program starts
+SESSION_ID = session_timestamp
+
+# Game counter within the current session
+game_number_counter = 1
+
+# Create the datasets directory if it does not exist
+os.makedirs(CSV_DIR, exist_ok=True)
+
+# Write header row only if the CSV file does not yet exist
+if not os.path.exists(CONTINUOUS_CSV_FILE):
+    with open(CONTINUOUS_CSV_FILE, "w", newline="", encoding="utf-8") as csv_init:
+        writer = csv.DictWriter(csv_init, fieldnames=CSV_HEADERS)
+        writer.writeheader()
+
+# -------------------------------------------------------------------
+# STATISTICAL RECORDS (metrics to be included in the group report)
+# -------------------------------------------------------------------
+# Statistics accumulated throughout the session
+session_stats = {
+    "total_games": 0,
+    "player_wins": 0,
+    "ai_wins": 0,
+    "draws": 0,
+    "total_moves": 0,
+    "ai_move_scores": [],   # Used to compute average minimax score
+}
 
 playlist = [
     "sounds/connect_4_music.mpeg.ogg", 
@@ -123,7 +179,7 @@ def winning_move(board, piece):
     return False
 
 def reset_game(full_reset=True):
-    global game_history_log, move_counter, current_dataset_file, p1_towers, p2_towers
+    global game_history_log, move_counter, current_dataset_file, p1_towers, p2_towers, game_number_counter
     
     if full_reset:
         # Reset the list and counter because of new game
@@ -135,6 +191,9 @@ def reset_game(full_reset=True):
         # Creating new file name for new game
         session_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         current_dataset_file = f"datasets/dataset_{session_timestamp}.json"
+
+        # Increment game number counter within the session when a new game starts
+        game_number_counter += 1
     
     new_board = create_board()
     
@@ -268,13 +327,90 @@ def pick_best_move(board, piece):
 
     return best_col
 
+def write_move_to_csv(player_label, chosen_col, minimax_score_val, ai_exp, board_state):
+    """
+    Appends each move to the continuous CSV file (append mode).
+    Called for both player and AI moves.
+    Designed to be used as machine learning training data.
+    """
+    global p1_towers, p2_towers, game_number_counter, session_stats
+
+    # Flatten the board to a 1D string (42 cells, comma-separated)
+    board_flat_str = ",".join(str(int(cell)) for row in board_state for cell in row)
+
+    row_data = {
+        "session_id":      SESSION_ID,
+        "game_number":     game_number_counter,
+        "move_number":     move_counter,
+        "player":          player_label,
+        "match_type":      current_match_type,
+        "game_mode":       current_game_mode,
+        "difficulty":      current_difficulty if current_match_type == "PVE" else "N/A",
+        "chosen_column":   int(chosen_col),
+        "minimax_score":   float(minimax_score_val) if minimax_score_val is not None else "N/A",
+        "ai_explanation":  ai_exp if ai_exp else "N/A",
+        "p1_towers":       p1_towers,
+        "p2_towers":       p2_towers,
+        "board_flat":      board_flat_str,
+        "timestamp":       str(datetime.now())
+    }
+
+    # Append row to the continuous CSV file (append mode — file is never deleted)
+    with open(CONTINUOUS_CSV_FILE, "a", newline="", encoding="utf-8") as csv_file:
+        writer = csv.DictWriter(csv_file, fieldnames=CSV_HEADERS)
+        writer.writerow(row_data)
+
+    # Update session statistics
+    session_stats["total_moves"] += 1
+    if player_label == "AI_Warrior" and minimax_score_val is not None:
+        session_stats["ai_move_scores"].append(float(minimax_score_val))
+
+
+def write_game_stats_to_csv(winner_label):
+    """
+    Writes a summary statistics entry at the end of each game.
+    This entry can be used as the target variable (winner) for ML model training.
+    """
+    global session_stats, game_number_counter
+
+    # Update session statistics
+    session_stats["total_games"] += 1
+    if winner_label == "PLAYER":
+        session_stats["player_wins"] += 1
+    elif winner_label == "AI_Warrior":
+        session_stats["ai_wins"] += 1
+    else:
+        session_stats["draws"] += 1
+
+    # Calculate average AI minimax score
+    avg_ai_score = (
+        sum(session_stats["ai_move_scores"]) / len(session_stats["ai_move_scores"])
+        if session_stats["ai_move_scores"] else 0
+    )
+
+    # Print statistics summary to terminal
+    print("\n" + "=" * 50)
+    print(f"  [STATS LOG] Game #{game_number_counter} Over")
+    print(f"  Winner           : {winner_label}")
+    print(f"  Total Moves      : {move_counter - 1}")
+    print(f"  Avg AI Score     : {avg_ai_score:.2f}")
+    print(f"  Session Summary  : {session_stats['player_wins']}W / {session_stats['ai_wins']}L / {session_stats['draws']}D")
+    print(f"  CSV File         : {CONTINUOUS_CSV_FILE}")
+    print("=" * 50 + "\n")
+
+    # Reset AI score list for the next game
+    session_stats["ai_move_scores"] = []
+
+
 def log_final_result(winner_piece):
     if current_match_type != "PVE":
         return
         
+    winner_label = "PLAYER" if winner_piece == PLAYER_PIECE else "AI_Warrior"
+
     final_log = {
         "match_status": "GAME_OVER",
-        "winner": "PLAYER" if winner_piece == PLAYER_PIECE else "AI_Warrior",
+        "winner": winner_label,
         "ai_final_status": "DEFEATED" if winner_piece == PLAYER_PIECE else "VICTORIOUS",
         "total_moves": move_counter - 1,
         "final_board": board.tolist(),
@@ -283,6 +419,9 @@ def log_final_result(winner_piece):
     game_history_log.append(final_log)
     with open(current_dataset_file, "w", encoding="utf-8") as outfile:
         json.dump(game_history_log, outfile, indent=4, ensure_ascii=False)
+
+    # Write end-of-game statistics to CSV and print to terminal
+    write_game_stats_to_csv(winner_label)
 
 def process_win(piece):
     global game_over, p1_towers, p2_towers, board, turn
@@ -852,6 +991,9 @@ while True: # Infinity loop structure
                 
                 # Main menu button - red
                 draw_button_with_hover(screen, "MENU", top_button_font, (20, 30, 120, 40), RED, (255, 100, 100), BLACK)
+
+                # CSV save button — placed at the bottom center to avoid overlapping the win message
+                draw_button_with_hover(screen, "SAVE CSV", top_button_font, (width//2 - 60, height - 70, 120, 40), (0, 150, 200), (50, 200, 255), BLACK)
                 
                 pygame.display.update()
 
@@ -864,6 +1006,17 @@ while True: # Infinity loop structure
                     elif (20 <= posx <= 140) and (30 <= posy <= 70):
                         if click_sound: click_sound.play()
                         state = "MENU"
+                    # SAVE CSV button: print file path to terminal and show on-screen confirmation
+                    elif (width//2 - 60 <= posx <= width//2 + 60) and (height - 70 <= posy <= height - 30):
+                        if click_sound: click_sound.play()
+                        abs_csv_path = os.path.abspath(CONTINUOUS_CSV_FILE)
+                        print(f"\n[CSV SAVE] Continuous data file: {abs_csv_path}")
+                        print(f"[CSV SAVE] Total rows recorded (excluding header): {session_stats['total_moves']}")
+                        # Show a brief on-screen confirmation message near the button
+                        csv_msg = top_button_font.render(f"Saved: {CONTINUOUS_CSV_FILE}", 1, (0, 255, 200))
+                        screen.blit(csv_msg, (width//2 - csv_msg.get_width()//2, height - 115))
+                        pygame.display.update()
+                        pygame.time.wait(2000)
                 continue # Skip the loop for other playing processes
 
             # Scenario 2: The game is going on (classic gameplay)
@@ -897,6 +1050,11 @@ while True: # Infinity loop structure
                             drop_piece(board, row, col, active_piece)
                             if drop_sound:
                                 drop_sound.play() # Rock falling effect
+
+                            # Log the player's move to the continuous CSV file
+                            player_label = "PLAYER" if turn == PLAYER else "PLAYER_2"
+                            write_move_to_csv(player_label, col, None, None, board)
+                            move_counter += 1
 
                             if winning_move(board, active_piece):
                                 process_win(active_piece)
@@ -1065,6 +1223,9 @@ while True: # Infinity loop structure
             # Writing to JSON file
             with open(current_dataset_file, "w", encoding="utf-8") as outfile:
                 json.dump(game_history_log, outfile, indent=4, ensure_ascii=False)
+
+            # Log the AI move to the continuous CSV file as well
+            write_move_to_csv("AI_Warrior", col, minimax_score, ai_explanation, board)
                 
             move_counter += 1
 
