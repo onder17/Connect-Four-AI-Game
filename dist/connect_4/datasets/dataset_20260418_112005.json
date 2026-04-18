@@ -1,0 +1,587 @@
+[
+    {
+        "move_number": 1,
+        "player": "AI_Warrior",
+        "level": "NORMAL",
+        "chosen_column": 3,
+        "ai_explanation": "AI selected the center column (Score: 6) to maximize future horizontal and diagonal possibilities.",
+        "minimax_calculated_score": 6.0,
+        "timestamp": "2026-04-18 11:20:10.513695",
+        "board_state": [
+            [
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                2.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0
+            ]
+        ]
+    },
+    {
+        "move_number": 2,
+        "player": "AI_Warrior",
+        "level": "NORMAL",
+        "chosen_column": 2,
+        "ai_explanation": "AI calculated 3 steps ahead and selected column 2 for steady strategic positioning.",
+        "minimax_calculated_score": 9.0,
+        "timestamp": "2026-04-18 11:20:12.456733",
+        "board_state": [
+            [
+                0.0,
+                0.0,
+                2.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                2.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0
+            ]
+        ]
+    },
+    {
+        "move_number": 3,
+        "player": "AI_Warrior",
+        "level": "NORMAL",
+        "chosen_column": 3,
+        "ai_explanation": "AI selected the center column (Score: 14) to maximize future horizontal and diagonal possibilities.",
+        "minimax_calculated_score": 14.0,
+        "timestamp": "2026-04-18 11:20:14.113120",
+        "board_state": [
+            [
+                0.0,
+                0.0,
+                2.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                1.0,
+                2.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                2.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0
+            ]
+        ]
+    },
+    {
+        "move_number": 4,
+        "player": "AI_Warrior",
+        "level": "NORMAL",
+        "chosen_column": 2,
+        "ai_explanation": "AI calculated 3 steps ahead and selected column 2 for steady strategic positioning.",
+        "minimax_calculated_score": 17.0,
+        "timestamp": "2026-04-18 11:20:14.857865",
+        "board_state": [
+            [
+                0.0,
+                0.0,
+                2.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                1.0,
+                2.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                1.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                2.0,
+                2.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0
+            ]
+        ]
+    },
+    {
+        "move_number": 5,
+        "player": "AI_Warrior",
+        "level": "NORMAL",
+        "chosen_column": 3,
+        "ai_explanation": "AI selected the center column (Score: 24) to maximize future horizontal and diagonal possibilities.",
+        "minimax_calculated_score": 24.0,
+        "timestamp": "2026-04-18 11:20:16.737291",
+        "board_state": [
+            [
+                0.0,
+                0.0,
+                2.0,
+                1.0,
+                1.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                1.0,
+                2.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                1.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                2.0,
+                2.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                2.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0
+            ]
+        ]
+    },
+    {
+        "move_number": 6,
+        "player": "AI_Warrior",
+        "level": "NORMAL",
+        "chosen_column": 2,
+        "ai_explanation": "AI calculated 3 steps ahead and selected column 2 for steady strategic positioning.",
+        "minimax_calculated_score": 29.0,
+        "timestamp": "2026-04-18 11:20:17.821616",
+        "board_state": [
+            [
+                0.0,
+                0.0,
+                2.0,
+                1.0,
+                1.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                1.0,
+                2.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                1.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                2.0,
+                2.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                2.0,
+                2.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0
+            ]
+        ]
+    },
+    {
+        "move_number": 7,
+        "player": "AI_Warrior",
+        "level": "NORMAL",
+        "chosen_column": 6,
+        "ai_explanation": "AI calculated 3 steps ahead and selected column 6 for steady strategic positioning.",
+        "minimax_calculated_score": 33.0,
+        "timestamp": "2026-04-18 11:20:19.099447",
+        "board_state": [
+            [
+                0.0,
+                0.0,
+                2.0,
+                1.0,
+                1.0,
+                0.0,
+                2.0
+            ],
+            [
+                0.0,
+                0.0,
+                1.0,
+                2.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                1.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                2.0,
+                2.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                2.0,
+                2.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                1.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0
+            ]
+        ]
+    },
+    {
+        "move_number": 8,
+        "player": "AI_Warrior",
+        "level": "NORMAL",
+        "chosen_column": 5,
+        "ai_explanation": "AI calculated 3 steps ahead and selected column 5 for steady strategic positioning.",
+        "minimax_calculated_score": 41.0,
+        "timestamp": "2026-04-18 11:20:21.755824",
+        "board_state": [
+            [
+                0.0,
+                0.0,
+                2.0,
+                1.0,
+                1.0,
+                1.0,
+                2.0
+            ],
+            [
+                0.0,
+                0.0,
+                1.0,
+                2.0,
+                0.0,
+                2.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                1.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                2.0,
+                2.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                2.0,
+                2.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                1.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0
+            ]
+        ]
+    },
+    {
+        "move_number": 9,
+        "player": "AI_Warrior",
+        "level": "NORMAL",
+        "chosen_column": 4,
+        "ai_explanation": "AI has found a definitive winning move or successfully blocked the opponent's absolute victory!",
+        "minimax_calculated_score": 100000000000000.0,
+        "timestamp": "2026-04-18 11:20:23.207355",
+        "board_state": [
+            [
+                0.0,
+                0.0,
+                2.0,
+                1.0,
+                1.0,
+                1.0,
+                2.0
+            ],
+            [
+                0.0,
+                0.0,
+                1.0,
+                2.0,
+                1.0,
+                2.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                1.0,
+                1.0,
+                2.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                2.0,
+                2.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                2.0,
+                2.0,
+                0.0,
+                0.0,
+                0.0
+            ],
+            [
+                0.0,
+                0.0,
+                1.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0
+            ]
+        ]
+    }
+]

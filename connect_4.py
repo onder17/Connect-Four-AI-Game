@@ -335,6 +335,26 @@ def process_win(piece):
         screen.blit(label, (width/2 - label.get_width()/2, 30))
         log_final_result(piece)
 
+def process_draw():
+    global game_over, board, turn
+    
+    draw_board(board)
+    screen.blit(game_bg_image, (0,0), (0, 0, width, SQUARESIZE))
+    
+    if current_game_mode == "CONQUER":
+        msg = "BATTLE DRAW! NO TOWERS LOST!"
+        label = win_font.render(msg, 1, WHITE)
+        screen.blit(label, (width/2 - label.get_width()/2, 30))
+        pygame.display.update()
+        
+        pygame.time.wait(2500)
+        board, _, turn = reset_game(full_reset=False)
+    else: # CLASSIC MODE
+        game_over = True
+        msg = "IT'S A DRAW!!"
+        label = win_font.render(msg, 1, WHITE)
+        screen.blit(label, (width/2 - label.get_width()/2, 30))
+        pygame.display.update()
 
 def draw_board(board):
     for c in range(COLUMN_COUNT):
@@ -880,6 +900,8 @@ while True: # Infinity loop structure
 
                             if winning_move(board, active_piece):
                                 process_win(active_piece)
+                            elif len(get_valid_locations(board)) == 0:
+                                process_draw()
                             else:
                                 turn += 1
                                 turn = turn % 2
@@ -1048,6 +1070,8 @@ while True: # Infinity loop structure
 
             if winning_move(board, AI_PIECE):
                 process_win(AI_PIECE)
+            elif len(get_valid_locations(board)) == 0:
+                process_draw()
             else:
                 turn += 1
                 turn = turn % 2
