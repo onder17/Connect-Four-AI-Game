@@ -12,10 +12,12 @@
 
 ## 🚀 Key Features
 
-* **Minimax AI Engine:** Calculates the most optimal moves up to 5 steps ahead using deep tree searching.
+* **Minimax AI Engine:** Calculates the most optimal moves up to 5 steps ahead using deep tree searching.(Unbeatable AI Logic)
+* **Different Level Templates:** EASY, MEDIUM and HARD level options for client.(Target depth had determined rowly 1, 3 and 5.)
+* **Win & Conquer Mode:** This is a tournament-based game mode.
 * **Alpha-Beta Pruning:** A high-efficiency optimization that significantly reduces computational cost by pruning unnecessary branches of the game tree.
 * **Explainable AI (XAI):** The AI doesn't just play; it explains. Every move is logged in the terminal with a human-readable strategic explanation (e.g., "AI detects a strong offensive opportunity").
-* **Automatic Dataset Generation:** Every session is recorded as a time-stamped JSON file in the `datasets/` directory, capturing board states and Minimax scores for potential Machine Learning training.
+* **Automatic Dataset Generation:** For every session is recorded as a time-stamped one CSV file in the `datasets/` directory, capturing board states and Minimax scores for potential Machine Learning training.
 * **Cinematic Experience:** Features a high-quality intro video, dynamic sound effects, and a custom-designed medieval warfare UI.
 
 ---
@@ -26,7 +28,7 @@
 * **GUI & Audio:** [Pygame](https://www.pygame.org/)
 * **Matrix Operations:** [NumPy](https://numpy.org/)
 * **Computer Vision (Intro):** [OpenCV](https://opencv.org/)
-* **Data Structure:** JSON (Session-based logging)
+* **Data Structure:** CSV (One dataset for training)
 
 ---
 
@@ -34,8 +36,7 @@
 
 1.  **Clone the Repository:**
     ```bash
-    git clone [https://github.com/YOUR_USERNAME/Connect-4-AI-Game.git](https://github.com/YOUR_USERNAME/Connect-4-AI-Game.git)
-    cd Connect-4-AI-Game
+    git clone https://github.com/onder17/Connect-Four-AI-Game.git
     ```
 2.  **Install Dependencies:**
     ```bash
@@ -43,7 +44,7 @@
     ```
 3.  **Run the Game:**
     ```bash
-    python main.py
+    python connect_4.py
     ```
 
 ### Controls:
@@ -69,7 +70,7 @@ The AI evaluates the board using a heuristic scoring system that prioritizes:
 * `images/`: High-resolution UI assets and backgrounds.
 * `sounds/`: SFX including rock falling and background music.
 * `videos/`: Cinematic intro video.
-* `datasets/`: Auto-generated JSON files for each game session.
+* `datasets/`: Auto-generated CSV file for every game.
 
 ---
 
