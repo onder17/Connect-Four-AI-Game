@@ -7,12 +7,12 @@ import cv2
 import json
 from datetime import datetime
 
-#defined list for log processes
+# Defined list for log processes
 game_history_log = []
 move_counter = 1
 
-#creating an unique file name
-#instance output: dataset_20260413_154530.json
+# Creating a unique file name
+# Instance output: dataset_20260413_154530.json
 session_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 current_dataset_file = f"datasets/dataset_{session_timestamp}.json"
 
@@ -32,6 +32,14 @@ playlist = [
 current_track_index = random.randint(0, len(playlist) - 1)
 is_music_paused = False
 MUSIC_END = pygame.USEREVENT + 1
+
+# AI DIFFICULTY LEVELS
+DIFFICULTY_LEVELS = {
+    "EASY": {"depth": 1, "label": "EASY"},
+    "NORMAL": {"depth": 3, "label": "MEDIUM"},
+    "HARD": {"depth": 5, "label": "HARD"}
+}
+current_difficulty = "HARD"
 
 BLUE = (0,0,255)
 BLACK = (0,0,0)
@@ -100,19 +108,20 @@ def winning_move(board, piece):
 def reset_game():
     global game_history_log, move_counter, current_dataset_file
     
-    #reset the list and counter because of new game
+    # Reset the list and counter because of new game
     game_history_log = []
     move_counter = 1
     
-    #creating new file name for new game
+    # Creating new file name for new game
     session_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     current_dataset_file = f"datasets/dataset_{session_timestamp}.json"
     new_board = create_board()
-    #clear the winning message for new game
+    
+    # Clear the winning message for new game
     screen.blit(game_bg_image , (0,0))
     draw_board(new_board)
     pygame.display.update()
-    new_turn  =random.randint(PLAYER,AI)
+    new_turn  = random.randint(PLAYER,AI)
     return new_board , False , new_turn
 
 def evaluate_window(window, piece):
@@ -136,26 +145,26 @@ def evaluate_window(window, piece):
 def score_position(board, piece):
     score = 0
 
-    ## Score center column
+    # Score center column
     center_array = [int(i) for i in list(board[:, COLUMN_COUNT//2])]
     center_count = center_array.count(piece)
     score += center_count * 3
 
-    ## Score Horizontal
+    # Score Horizontal
     for r in range(ROW_COUNT):
         row_array = [int(i) for i in list(board[r,:])]
         for c in range(COLUMN_COUNT-3):
             window = row_array[c:c+WINDOW_LENGTH]
             score += evaluate_window(window, piece)
 
-    ## Score Vertical
+    # Score Vertical
     for c in range(COLUMN_COUNT):
         col_array = [int(i) for i in list(board[:,c])]
         for r in range(ROW_COUNT-3):
             window = col_array[r:r+WINDOW_LENGTH]
             score += evaluate_window(window, piece)
 
-    ## Score posiive sloped diagonal
+    # Score positive sloped diagonal
     for r in range(ROW_COUNT-3):
         for c in range(COLUMN_COUNT-3):
             window = [board[r+i][c+i] for i in range(WINDOW_LENGTH)]
@@ -224,7 +233,6 @@ def get_valid_locations(board):
     return valid_locations
 
 def pick_best_move(board, piece):
-
     valid_locations = get_valid_locations(board)
     best_score = -10000
     best_col = random.choice(valid_locations)
@@ -268,26 +276,26 @@ def play_intro_video(video_path):
     
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
-        print(f"Hata: {video_path} file does not exist.")
+        print(f"Error: {video_path} file does not exist.")
         return
 
-    #video fps value
+    # Video fps value
     fps = cap.get(cv2.CAP_PROP_FPS)
     if fps == 0:
         fps = 30
     clock = pygame.time.Clock()
 
-    #playing voice file with pygame
+    # Playing voice file with pygame
     try:
         pygame.mixer.music.load("videos/intro_voice.ogg")
         pygame.mixer.music.play()
     except Exception as e:
-        print(f"video voice does not available: {e}")
+        print(f"Video voice is not available: {e}")
 
     while cap.isOpened():
         ret, frame = cap.read()
         
-        #break loop if video is over
+        # Break loop if video is over
         if not ret:
             break
 
@@ -313,7 +321,7 @@ def play_intro_video(video_path):
                 if event.key in [pygame.K_ESCAPE, pygame.K_SPACE, pygame.K_RETURN]:
                     skip_video = True
                     break
-                #f11 - fullscreen
+                # F11 - fullscreen toggle
                 if event.key == pygame.K_F11:
                     fullscreen = not fullscreen
                     if fullscreen:
@@ -332,21 +340,22 @@ def play_intro_video(video_path):
                 break
                 
         if skip_video:
-            #stop music when video is skipped
+            # Stop music when video is skipped
             pygame.mixer.music.stop()
             break
 
         clock.tick(fps)
 
     cap.release()
-    #stop music when intro is over
+    # Stop music when intro is over
     pygame.mixer.music.stop()
 
 pygame.init()
 
-pygame.mixer.init() #voice system initializing
+# Voice system initializing
+pygame.mixer.init() 
 
-#rock falling effect
+# Rock falling effect
 drop_sound = pygame.mixer.Sound("sounds/drop.wav")
 
 
@@ -361,24 +370,24 @@ RADIUS = int(SQUARESIZE/2 - 5)
 
 screen = pygame.display.set_mode(size , pygame.SCALED)
 
-#window title & icon settings
+# Window title & icon settings
 pygame.display.set_caption("Connect Wars: 4")
 try:
     icon_image = pygame.image.load("images/pixel_sword.png")
     pygame.display.set_icon(icon_image)
 except Exception as e:
-    print(f"Game icon does not seen: {e}")
+    print(f"Game icon could not be loaded: {e}")
 
 myfont = pygame.font.SysFont("monospace", 75)
-button_font = pygame.font.SysFont("monospace", 30) #small size for button
-menu_font = pygame.font.SysFont("monospace", 60) #Menu Titles
-win_font = pygame.font.SysFont("monospace", 50) #font for winning text
-top_button_font = pygame.font.SysFont("monospace", 22) #kibar font for top buttons
+button_font = pygame.font.SysFont("monospace", 30) # Small size for button
+menu_font = pygame.font.SysFont("monospace", 60) # Menu Titles
+win_font = pygame.font.SysFont("monospace", 50) # Font for winning text
+top_button_font = pygame.font.SysFont("monospace", 22) # Elegant font for top buttons
 
-#game engine status
-state = "MENU" #initialize from main menu
+# Game engine status
+state = "MENU" # Initialize from main menu
 volume_level = 0.2
-fullscreen = False #change with F11
+fullscreen = False # Change with F11
 
 original_bg_image = pygame.image.load("images/bg_image_new.png").convert()
 bg_image = pygame.transform.smoothscale(original_bg_image, (width,height))
@@ -389,18 +398,18 @@ game_bg_image = pygame.transform.smoothscale(original_game_bg_image, (width,heig
 original_about_bg_image = pygame.image.load("images/bg_image_about.jpeg").convert()
 about_bg_image = pygame.transform.smoothscale(original_about_bg_image, (width,height))
 
-#variables initialites manuel
+# Variables initialized manually
 board = create_board()
 game_over = False
 turn = random.randint(PLAYER, AI)
 
-# 1. play intro
+# 1. Play intro
 play_intro_video("videos/intro_video.mp4")
 
-#obstruct the black screen while rendering main menu
+# Obstruct the black screen while rendering main menu
 pygame.event.post(pygame.event.Event(pygame.USEREVENT))
 
-# 2.main menu music after the intro is over
+# 2. Main menu music after the intro is over
 try:
     pygame.mixer.music.load(playlist[current_track_index])
     pygame.mixer.music.set_volume(volume_level)
@@ -409,7 +418,7 @@ try:
 except pygame.error as e:
     print(f"Main menu music did not upload: {e}")
 
-while True: #infinity loop structure
+while True: # Infinity loop structure
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -420,7 +429,7 @@ while True: #infinity loop structure
             pygame.mixer.music.load(playlist[current_track_index])
             pygame.mixer.music.play(0)
 
-        #f11 function - for fullscreen
+        # F11 function - for fullscreen
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_F11:
                 fullscreen = not fullscreen
@@ -435,7 +444,8 @@ while True: #infinity loop structure
                     bg_image = pygame.transform.smoothscale(original_bg_image, (width,height))
                     game_bg_image = pygame.transform.smoothscale(original_game_bg_image, (width,height))
                     about_bg_image = pygame.transform.smoothscale(original_about_bg_image, (width,height))
-                #update and adapt to matrix belong to screen changing
+                
+                # Update and adapt to matrix belonging to screen changing
                 if state == "PLAYING":
                     draw_board(board)
                     pygame.display.update()
@@ -443,11 +453,11 @@ while True: #infinity loop structure
                     screen.blit(about_bg_image, (0,0))
                     pygame.display.update()
 
-        #state 1 : main menu
+        # State 1 : Main menu
         if state == "MENU":
             screen.blit(bg_image , (0,0))
             
-            #fixed sizes for buttons
+            # Fixed sizes for buttons
             draw_button_with_hover(screen, "PLAY", button_font, (width/2 - 100, 200, 200, 60), RED, (255, 100, 100), BLACK)
             
             draw_button_with_hover(screen, "SETTINGS", button_font, (width/2 - 100, 290, 200, 60), YELLOW, (255, 255, 150), BLACK)
@@ -462,88 +472,115 @@ while True: #infinity loop structure
                 posx, posy = event.pos
                 if (width/2 - 100 <= posx <= width/2 + 100):
                     if (200 <= posy <= 260): 
-                        board, game_over, turn = reset_game() #reset everything
+                        board, game_over, turn = reset_game() # Reset everything
                         state = "PLAYING"
                     elif (290 <= posy <= 350): 
                         state = "SETTINGS"
                     elif (380 <= posy <= 440): 
                         state = "ABOUT"
-                    elif (470 <= posy <= 530): #click quit
+                    elif (470 <= posy <= 530): # Click quit
                         state = "QUIT_CONFIRM"
 
-        #state 2 : settings part
+        # State 2 : Settings part
         elif state == "SETTINGS":
             screen.blit(bg_image , (0,0))
             
-            #dimming overlay
+            # Dimming overlay
             overlay = pygame.Surface((width, height), pygame.SRCALPHA)
-            overlay.fill((0, 0, 0, 160)) #the value of 160 is transparent (0= full transparent, 255=pitch black)
+            overlay.fill((0, 0, 0, 160)) # The value of 160 is transparent (0= full transparent, 255=pitch black)
             screen.blit(overlay, (0, 0))
             
-            #shaded title
+            # Shaded title
             title_shadow = menu_font.render("SETTINGS", 1, BLACK)
-            screen.blit(title_shadow, (width/2 - title_shadow.get_width()/2 + 4, 84))
+            screen.blit(title_shadow, (width/2 - title_shadow.get_width()/2 + 4, 34))
             title = menu_font.render("SETTINGS", 1, YELLOW)
-            screen.blit(title, (width/2 - title.get_width()/2, 80))
+            screen.blit(title, (width/2 - title.get_width()/2, 30))
             
-            #white color
+            # --- VOLUME SETTINGS ---
             vol_text = button_font.render(f"Music Volume: {int(volume_level*100)}%", 1, (255, 255, 255))
-            screen.blit(vol_text, (width/2 - vol_text.get_width()/2, 180))
+            screen.blit(vol_text, (width/2 - vol_text.get_width()/2, 110))
             
-            draw_button_with_hover(screen, "-", menu_font, (width/2 - 100, 230, 60, 60), BLUE, (100, 100, 255), BLACK)
-            
-            draw_button_with_hover(screen, "+", menu_font, (width/2 + 40, 230, 60, 60), BLUE, (100, 100, 255), BLACK)
+            draw_button_with_hover(screen, "-", menu_font, (width/2 - 100, 150, 60, 60), BLUE, (100, 100, 255), BLACK)
+            draw_button_with_hover(screen, "+", menu_font, (width/2 + 40, 150, 60, 60), BLUE, (100, 100, 255), BLACK)
 
-            #white color
+            # --- TRACK SETTINGS ---
             track_text = button_font.render(f"Track: {current_track_index + 1} / {len(playlist)}", 1, (255, 255, 255))
-            screen.blit(track_text, (width/2 - track_text.get_width()/2, 330))
+            screen.blit(track_text, (width/2 - track_text.get_width()/2, 240))
 
-            draw_button_with_hover(screen, "<", menu_font, (width/2 - 100, 380, 60, 60), YELLOW, (255, 255, 150), BLACK)
-            
-            draw_button_with_hover(screen, ">", menu_font, (width/2 + 40, 380, 60, 60), YELLOW, (255, 255, 150), BLACK)
+            draw_button_with_hover(screen, "<", menu_font, (width/2 - 100, 280, 60, 60), YELLOW, (255, 255, 150), BLACK)
+            draw_button_with_hover(screen, ">", menu_font, (width/2 + 40, 280, 60, 60), YELLOW, (255, 255, 150), BLACK)
 
+            # --- PAUSE BUTTON ---
             pp_color = BLACK if not is_music_paused else GREEN
             pp_hover = (50, 50, 50) if not is_music_paused else (50, 255, 50)
             pp_text_str = "PAUSE" if not is_music_paused else "CONTINUE"
             pp_text_color = WHITE if not is_music_paused else BLACK
-            draw_button_with_hover(screen, pp_text_str, button_font, (width/2 - 100, 450, 200, 60), pp_color, pp_hover, pp_text_color)
+            draw_button_with_hover(screen, pp_text_str, button_font, (width/2 - 100, 360, 200, 60), pp_color, pp_hover, pp_text_color)
             
-            draw_button_with_hover(screen, "BACK", button_font, (width/2 - 100, 530, 200, 60), RED, (255, 100, 100), BLACK)
+            # --- AI LEVEL SETTINGS ---
+            diff_text = button_font.render(f"AI Level: {DIFFICULTY_LEVELS[current_difficulty]['label']}", 1, (255, 255, 255))
+            screen.blit(diff_text, (width/2 - diff_text.get_width()/2, 450))
+
+            draw_button_with_hover(screen, "<", menu_font, (width/2 - 100, 490, 60, 60), YELLOW, (255, 255, 150), BLACK)
+            draw_button_with_hover(screen, ">", menu_font, (width/2 + 40, 490, 60, 60), YELLOW, (255, 255, 150), BLACK)
+
+            # --- BACK BUTTON ---
+            draw_button_with_hover(screen, "BACK", button_font, (width/2 - 100, 580, 200, 60), RED, (255, 100, 100), BLACK)
             
             pygame.display.update()
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 posx, posy = event.pos
-                if (width/2 - 100 <= posx <= width/2 - 40) and (230 <= posy <= 290):
-                    volume_level = max(0.0, volume_level - 0.1)
-                    pygame.mixer.music.set_volume(volume_level)
-                elif (width/2 + 40 <= posx <= width/2 + 100) and (230 <= posy <= 290):
-                    volume_level = min(1.0, volume_level + 0.1)
-                    pygame.mixer.music.set_volume(volume_level)
-                elif (width/2 - 100 <= posx <= width/2 - 40) and (380 <= posy <= 440):
-                    current_track_index = (current_track_index - 1) % len(playlist)
-                    pygame.mixer.music.load(playlist[current_track_index])
-                    pygame.mixer.music.play(0)
-                    is_music_paused = False
-                elif (width/2 + 40 <= posx <= width/2 + 100) and (380 <= posy <= 440):
-                    current_track_index = (current_track_index + 1) % len(playlist)
-                    pygame.mixer.music.load(playlist[current_track_index])
-                    pygame.mixer.music.play(0)
-                    is_music_paused = False
-                elif (width/2 - 100 <= posx <= width/2 + 100) and (450 <= posy <= 510):
-                    is_music_paused = not is_music_paused
-                    if is_music_paused:
-                        pygame.mixer.music.pause()
-                    else:
-                        pygame.mixer.music.unpause()
-                elif (width/2 - 100 <= posx <= width/2 + 100) and (530 <= posy <= 590):
-                    state = "MENU"
+                # Volume Logic
+                if (150 <= posy <= 210):
+                    if (width/2 - 100 <= posx <= width/2 - 40):
+                        volume_level = max(0.0, volume_level - 0.1)
+                        pygame.mixer.music.set_volume(volume_level)
+                    elif (width/2 + 40 <= posx <= width/2 + 100):
+                        volume_level = min(1.0, volume_level + 0.1)
+                        pygame.mixer.music.set_volume(volume_level)
+                
+                # Track Logic
+                elif (280 <= posy <= 340):
+                    if (width/2 - 100 <= posx <= width/2 - 40):
+                        current_track_index = (current_track_index - 1) % len(playlist)
+                        pygame.mixer.music.load(playlist[current_track_index])
+                        pygame.mixer.music.play(0)
+                        is_music_paused = False
+                    elif (width/2 + 40 <= posx <= width/2 + 100):
+                        current_track_index = (current_track_index + 1) % len(playlist)
+                        pygame.mixer.music.load(playlist[current_track_index])
+                        pygame.mixer.music.play(0)
+                        is_music_paused = False
+                
+                # Pause Logic
+                elif (360 <= posy <= 420):
+                    if (width/2 - 100 <= posx <= width/2 + 100):
+                        is_music_paused = not is_music_paused
+                        if is_music_paused:
+                            pygame.mixer.music.pause()
+                        else:
+                            pygame.mixer.music.unpause()
+                
+                # Level Logic
+                elif (490 <= posy <= 550):
+                    diffs = list(DIFFICULTY_LEVELS.keys())
+                    idx = diffs.index(current_difficulty)
+                    if (width/2 - 100 <= posx <= width/2 - 40):
+                        current_difficulty = diffs[(idx-1)%3]
+                    elif (width/2 + 40 <= posx <= width/2 + 100):
+                        current_difficulty = diffs[(idx+1)%3]
 
-        #state for ABOUT screen
+                # Back Logic
+                elif (580 <= posy <= 640):
+                    if (width/2 - 100 <= posx <= width/2 + 100):
+                        state = "MENU"
+
+        # State for ABOUT screen
         elif state == "ABOUT":
             screen.blit(about_bg_image, (0,0))
             
-            #back button - at the bottom
+            # Back button - at the bottom
             draw_button_with_hover(screen, "BACK", button_font, (width/2 - 100, height - 100, 200, 60), RED, (255, 100, 100), BLACK)
             
             pygame.display.update()
@@ -553,28 +590,28 @@ while True: #infinity loop structure
                 if (width/2 - 100 <= posx <= width/2 + 100) and (height - 100 <= posy <= height - 40):
                     state = "MENU"
 
-        #state 3 : gameplay screen
+        # State 3 : Gameplay screen
         elif state == "PLAYING":
-            #scenario 1: game over - wait for rematch option
+            # Scenario 1: Game over - wait for rematch option
             if game_over:
-                #rematch button - top_right
+                # Rematch button - top right
                 draw_button_with_hover(screen, "REMATCH", top_button_font, (width - 130, 30, 110, 40), (0, 200, 0), (50, 255, 50), BLACK)
                 
-                #main menu button - red
+                # Main menu button - red
                 draw_button_with_hover(screen, "MENU", top_button_font, (20, 30, 120, 40), RED, (255, 100, 100), BLACK)
                 
                 pygame.display.update()
 
-                #controlization for clicking the button
+                # Controlization for clicking the button
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     posx, posy = event.pos
                     if (width - 130 <= posx <= width - 20) and (30 <= posy <= 70):
-                        board, game_over, turn = reset_game() #reset everything
+                        board, game_over, turn = reset_game() # Reset everything
                     elif (20 <= posx <= 140) and (30 <= posy <= 70):
                         state = "MENU"
-                continue #skip the loop for other playing processes
+                continue # Skip the loop for other playing processes
 
-            #scenario 2: the game is going on(classic gameplay)
+            # Scenario 2: The game is going on (classic gameplay)
             if event.type == pygame.MOUSEMOTION:
                 screen.blit(game_bg_image, (0,0), (0, 0, width, SQUARESIZE))
                 posx = event.pos[0]
@@ -591,22 +628,39 @@ while True: #infinity loop structure
                     if is_valid_location(board, col):
                         row = get_next_open_row(board, col)
                         drop_piece(board, row, col, PLAYER_PIECE)
-                        drop_sound.play() #rock falling effect
+                        drop_sound.play() # Rock falling effect
 
                         if winning_move(board, PLAYER_PIECE):
-                            screen.blit(game_bg_image, (0,0), (0, 0, width, SQUARESIZE)) #clear the top section
+                            screen.blit(game_bg_image, (0,0), (0, 0, width, SQUARESIZE)) # Clear the top section
                             label = win_font.render("Player 1 wins!!", 1, RED)
                             screen.blit(label, (width/2 - label.get_width()/2, 30))
                             game_over = True
+                            
+                            # --- FINAL LOG: AI DEFEATED ---
+                            final_log = {
+                                "match_status": "GAME_OVER",
+                                "winner": "PLAYER",
+                                "ai_final_status": "DEFEATED",
+                                "total_moves": move_counter - 1,
+                                "final_board": board.tolist(),
+                                "timestamp": str(datetime.now())
+                            }
+                            game_history_log.append(final_log)
+                            with open(current_dataset_file, "w", encoding="utf-8") as outfile:
+                                json.dump(game_history_log, outfile, indent=4, ensure_ascii=False)
 
                         turn += 1
                         turn = turn % 2
-                        #print_board(board)
                         draw_board(board)
 
-        #state 4 : exit confirmation screen
+        # State 4 : Exit confirmation screen
         elif state == "QUIT_CONFIRM":
             screen.blit(bg_image , (0,0))
+            
+            # Dimming overlay
+            overlay = pygame.Surface((width, height), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 160)) # The value of 160 is transparent
+            screen.blit(overlay, (0, 0))
             
             # Question text
             question = menu_font.render("QUIT THE GAME?", 1, YELLOW)
@@ -629,43 +683,66 @@ while True: #infinity loop structure
                 elif (width/2 + 30 <= posx <= width/2 + 150) and (350 <= posy <= 410):
                     state = "MENU"
 
-    #the moving structure for ai
+    # The AI movement logic
     if state == "PLAYING" and turn == AI and not game_over:                
-        col, minimax_score = minimax(board, 5, -math.inf, math.inf, True)
+        ai_depth = DIFFICULTY_LEVELS[current_difficulty]["depth"]
+        col, minimax_score = minimax(board, ai_depth, -math.inf, math.inf, True)
 
         if is_valid_location(board, col):
             row = get_next_open_row(board, col)
             drop_piece(board, row, col, AI_PIECE)
             drop_sound.play()
 
-            #EXPLAINABLE AI & JSON LOGGING
+            # --- EXPLAINABLE AI LOGIC (ENHANCED WITH LOSING STATES) ---
             ai_explanation = ""
-            # 1. EXPLAINABLE AI LOGIC
-            ai_explanation = ""
+            
             if minimax_score > 1000000:
                 ai_explanation = "AI has found a definitive winning move or successfully blocked the opponent's absolute victory!"
+                
             elif minimax_score < -1000000:
-                ai_explanation = "Critical situation! AI is falling back to the most optimal defensive position."
-            elif col == 3: #if ai select the exact mid column
+                # The AI sees it is going to lose definitively
+                if current_difficulty in ["EASY", "NORMAL"]:
+                    ai_explanation = f"AI ({current_difficulty}) failed to see the trap early enough. It recognizes an unavoidable defeat and makes a desperate move."
+                else:
+                    ai_explanation = "Despite its deep calculations, AI realizes the player has established an unblockable winning condition."
+                    
+            elif minimax_score <= -50:
+                # The AI is in a very bad position and forced into sub-optimal defensive moves
+                ai_explanation = f"AI is under heavy pressure (Score: {minimax_score}). It is struggling to defend against multiple player threats."
+                
+            elif minimax_score < 0:
+                # Standard defensive response
+                if current_difficulty == "EASY":
+                    ai_explanation = f"AI (EASY) lacks deep foresight and is merely reacting to the immediate threat (Score: {minimax_score})."
+                else:
+                    ai_explanation = f"AI is playing defensively (Score: {minimax_score}) to neutralize the player's upcoming threats."
+                    
+            elif col == 3: 
+                # If AI selects the exact mid column
                 ai_explanation = f"AI selected the center column (Score: {minimax_score}) to maximize future horizontal and diagonal possibilities."
-            elif minimax_score > 50: #an attacking opportunity for ai
+                
+            elif minimax_score > 50: 
+                # An attacking opportunity for AI
                 ai_explanation = f"AI detects a strong offensive opportunity (Score: {minimax_score}) and is building a strategic trap."
-            elif minimax_score < 0: #if ai has to be make defence
-                ai_explanation = f"AI is playing defensively (Score: {minimax_score}) to neutralize the player's upcoming threats."
-            else: #standard movements
-                ai_explanation = f"AI calculated 5 steps ahead and selected column {col} for steady strategic positioning."
+                
+            else: 
+                # Standard steady movements
+                ai_explanation = f"AI calculated {ai_depth} steps ahead and selected column {col} for steady strategic positioning."
 
+            # Terminal Printout
             print(f"\n--- [AI DECISION CENTER] Move No: {move_counter} ---")
+            print(f">> Level: {current_difficulty} (Depth: {ai_depth})")
             print(f">> Selected Column: {col}")
             print(f">> Minimax Calculated Score: {minimax_score}")
             print(f">> AI Explanation: {ai_explanation}")
             print("-" * 50)
             
-            #transforming the board to list - for json
+            # Transforming the board to list - for JSON
             board_state_list = board.tolist() 
             move_data = {
                 "move_number": move_counter,
                 "player": "AI_Warrior",
+                "level": current_difficulty,
                 "chosen_column": int(col),
                 "ai_explanation": ai_explanation,
                 "minimax_calculated_score": float(minimax_score),
@@ -674,19 +751,31 @@ while True: #infinity loop structure
             }
             game_history_log.append(move_data)
             
-            #writing to json file
+            # Writing to JSON file
             with open(current_dataset_file, "w", encoding="utf-8") as outfile:
                 json.dump(game_history_log, outfile, indent=4, ensure_ascii=False)
                 
             move_counter += 1
 
             if winning_move(board, AI_PIECE):
-                screen.blit(game_bg_image, (0,0), (0, 0, width, SQUARESIZE)) #clear the top section
+                screen.blit(game_bg_image, (0,0), (0, 0, width, SQUARESIZE)) # Clear the top section
                 label = win_font.render("AI wins!!", 1, YELLOW)
                 screen.blit(label, (width/2 - label.get_width()/2, 30))
                 game_over = True
+                
+                # --- FINAL LOG: AI VICTORIOUS ---
+                final_log = {
+                    "match_status": "GAME_OVER",
+                    "winner": "AI_Warrior",
+                    "ai_final_status": "VICTORIOUS",
+                    "total_moves": move_counter - 1,
+                    "final_board": board.tolist(),
+                    "timestamp": str(datetime.now())
+                }
+                game_history_log.append(final_log)
+                with open(current_dataset_file, "w", encoding="utf-8") as outfile:
+                    json.dump(game_history_log, outfile, indent=4, ensure_ascii=False)
 
-            #print_board(board)
             draw_board(board)
             turn += 1
             turn = turn % 2
