@@ -33,6 +33,15 @@ current_track_index = random.randint(0, len(playlist) - 1)
 is_music_paused = False
 MUSIC_END = pygame.USEREVENT + 1
 
+# GAME MODES & MATCH TYPES
+MODES = ["CLASSIC", "CONQUER"]
+MATCH_TYPES = ["PVE", "PVP"]
+current_game_mode = "CONQUER"
+current_match_type = "PVE"
+
+p1_towers = 3
+p2_towers = 3
+
 # AI DIFFICULTY LEVELS
 DIFFICULTY_LEVELS = {
     "EASY": {"depth": 1, "label": "EASY"},
@@ -59,6 +68,14 @@ PLAYER_PIECE = 1
 AI_PIECE = 2
 
 WINDOW_LENGTH = 4
+
+SQUARESIZE = 100
+X_OFFSET = 150 # Space reserved for castles on both sides
+
+width = COLUMN_COUNT * SQUARESIZE + (X_OFFSET * 2)
+height = (ROW_COUNT+1) * SQUARESIZE
+size = (width, height)
+RADIUS = int(SQUARESIZE/2 - 5)
 
 def create_board():
     board = np.zeros((ROW_COUNT,COLUMN_COUNT))
@@ -104,24 +121,28 @@ def winning_move(board, piece):
                 return True
     
     return False
-            
-def reset_game():
-    global game_history_log, move_counter, current_dataset_file
+
+def reset_game(full_reset=True):
+    global game_history_log, move_counter, current_dataset_file, p1_towers, p2_towers
     
-    # Reset the list and counter because of new game
-    game_history_log = []
-    move_counter = 1
+    if full_reset:
+        # Reset the list and counter because of new game
+        game_history_log = []
+        move_counter = 1
+        p1_towers = 3
+        p2_towers = 3
+        
+        # Creating new file name for new game
+        session_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        current_dataset_file = f"datasets/dataset_{session_timestamp}.json"
     
-    # Creating new file name for new game
-    session_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    current_dataset_file = f"datasets/dataset_{session_timestamp}.json"
     new_board = create_board()
     
     # Clear the winning message for new game
     screen.blit(game_bg_image , (0,0))
     draw_board(new_board)
     pygame.display.update()
-    new_turn  = random.randint(PLAYER,AI)
+    new_turn = random.randint(PLAYER,AI)
     return new_board , False , new_turn
 
 def evaluate_window(window, piece):
@@ -247,18 +268,99 @@ def pick_best_move(board, piece):
 
     return best_col
 
+def log_final_result(winner_piece):
+    if current_match_type != "PVE":
+        return
+        
+    final_log = {
+        "match_status": "GAME_OVER",
+        "winner": "PLAYER" if winner_piece == PLAYER_PIECE else "AI_Warrior",
+        "ai_final_status": "DEFEATED" if winner_piece == PLAYER_PIECE else "VICTORIOUS",
+        "total_moves": move_counter - 1,
+        "final_board": board.tolist(),
+        "timestamp": str(datetime.now())
+    }
+    game_history_log.append(final_log)
+    with open(current_dataset_file, "w", encoding="utf-8") as outfile:
+        json.dump(game_history_log, outfile, indent=4, ensure_ascii=False)
+
+def process_win(piece):
+    global game_over, p1_towers, p2_towers, board, turn
+    
+    draw_board(board)
+    screen.blit(game_bg_image, (0,0), (0, 0, width, SQUARESIZE))
+    
+    # Dynamic naming based on match type
+    opponent_name = "AI" if current_match_type == "PVE" else "PLAYER 2"
+    
+    if current_game_mode == "CONQUER":
+        if explosion_sound:
+            explosion_sound.play() # Explosion sound
+        
+        if piece == PLAYER_PIECE:
+            p2_towers = max(0, p2_towers - 1)
+            msg = "PLAYER 1 DESTROYS A TOWER!"
+        else:
+            p1_towers = max(0, p1_towers - 1)
+            msg = f"{opponent_name} DESTROYS A TOWER!"
+            
+        label = win_font.render(msg, 1, RED if piece == PLAYER_PIECE else YELLOW)
+        screen.blit(label, (width/2 - label.get_width()/2, 30))
+        pygame.display.update()
+        
+        if p1_towers == 0 or p2_towers == 0:
+            game_over = True
+            if win_sound:
+                win_sound.play() # Final win sound
+                
+            final_msg = "PLAYER 1 CONQUERS ALL!" if p1_towers > 0 else f"{opponent_name} CONQUERS ALL!"
+            pygame.time.wait(1500)
+            
+            screen.blit(game_bg_image, (0,0), (0, 0, width, SQUARESIZE))
+            label = win_font.render(final_msg, 1, RED if p1_towers > 0 else YELLOW)
+            screen.blit(label, (width/2 - label.get_width()/2, 30))
+            
+            log_final_result(piece)
+        else:
+            pygame.time.wait(2500)
+            board, _, turn = reset_game(full_reset=False)
+            
+    else: # CLASSIC MODE
+        game_over = True
+        if win_sound:
+            win_sound.play() # Final win sound
+            
+        final_msg = "PLAYER 1 WINS!!" if piece == PLAYER_PIECE else f"{opponent_name} WINS!!"
+        label = win_font.render(final_msg, 1, RED if piece == PLAYER_PIECE else YELLOW)
+        screen.blit(label, (width/2 - label.get_width()/2, 30))
+        log_final_result(piece)
+
+
 def draw_board(board):
     for c in range(COLUMN_COUNT):
         for r in range(ROW_COUNT):
-            pygame.draw.rect(screen, BLUE, (c*SQUARESIZE, r*SQUARESIZE+SQUARESIZE, SQUARESIZE, SQUARESIZE))
-            pygame.draw.circle(screen, BLACK, (int(c*SQUARESIZE+SQUARESIZE/2), int(r*SQUARESIZE+SQUARESIZE+SQUARESIZE/2)), RADIUS)
+            pygame.draw.rect(screen, BLUE, (c*SQUARESIZE + X_OFFSET, r*SQUARESIZE+SQUARESIZE, SQUARESIZE, SQUARESIZE))
+            pygame.draw.circle(screen, BLACK, (int(c*SQUARESIZE + X_OFFSET + SQUARESIZE/2), int(r*SQUARESIZE+SQUARESIZE+SQUARESIZE/2)), RADIUS)
     
     for c in range(COLUMN_COUNT):
         for r in range(ROW_COUNT):      
             if board[r][c] == PLAYER_PIECE:
-                pygame.draw.circle(screen, RED, (int(c*SQUARESIZE+SQUARESIZE/2), height-int(r*SQUARESIZE+SQUARESIZE/2)), RADIUS)
+                pygame.draw.circle(screen, RED, (int(c*SQUARESIZE + X_OFFSET + SQUARESIZE/2), height-int(r*SQUARESIZE+SQUARESIZE/2)), RADIUS)
             elif board[r][c] == AI_PIECE: 
-                pygame.draw.circle(screen, YELLOW, (int(c*SQUARESIZE+SQUARESIZE/2), height-int(r*SQUARESIZE+SQUARESIZE/2)), RADIUS)
+                pygame.draw.circle(screen, YELLOW, (int(c*SQUARESIZE + X_OFFSET + SQUARESIZE/2), height-int(r*SQUARESIZE+SQUARESIZE/2)), RADIUS)
+                
+    if current_game_mode == "CONQUER":
+        if castles_loaded:
+            screen.blit(red_castles[p1_towers], (5, height - CASTLE_HEIGHT - 10))
+            screen.blit(yellow_castles[p2_towers], (width - CASTLE_WIDTH - 5, height - CASTLE_HEIGHT - 10))
+        else:
+            # Fallback if images fail to load
+            opponent_short = "AI" if current_match_type == "PVE" else "P2"
+            p1_txt = top_button_font.render(f"P1: {p1_towers}", 1, RED)
+            p2_txt = top_button_font.render(f"{opponent_short}: {p2_towers}", 1, YELLOW)
+            screen.blit(p1_txt, (20, height/2))
+            screen.blit(p2_txt, (width - X_OFFSET + 20, height/2))
+
     pygame.display.update()
 
 def draw_button_with_hover(surface, text, font, rect_vals, color, hover_color, text_color):
@@ -356,17 +458,29 @@ pygame.init()
 pygame.mixer.init() 
 
 # Rock falling effect
-drop_sound = pygame.mixer.Sound("sounds/drop.wav")
+try:
+    drop_sound = pygame.mixer.Sound("sounds/drop.wav")
+except:
+    drop_sound = None
 
+# Explosion effect for Conquer Mode
+try:
+    explosion_sound = pygame.mixer.Sound("sounds/explosion_voice.ogg")
+except:
+    explosion_sound = drop_sound # Fallback if file is missing
 
-SQUARESIZE = 100
+# Menu click sound (requested filename)
+try:
+    click_sound = pygame.mixer.Sound("sounds/menu_click_voice.ogg")
+except:
+    click_sound = None
 
-width = COLUMN_COUNT * SQUARESIZE
-height = (ROW_COUNT+1) * SQUARESIZE
+# Game win sound (requested filename)
+try:
+    win_sound = pygame.mixer.Sound("sounds/celebration_march.ogg")
+except:
+    win_sound = None
 
-size = (width, height)
-
-RADIUS = int(SQUARESIZE/2 - 5)
 
 screen = pygame.display.set_mode(size , pygame.SCALED)
 
@@ -397,6 +511,39 @@ game_bg_image = pygame.transform.smoothscale(original_game_bg_image, (width,heig
 
 original_about_bg_image = pygame.image.load("images/bg_image_about.jpeg").convert()
 about_bg_image = pygame.transform.smoothscale(original_about_bg_image, (width,height))
+
+# Load Castle Assets
+try:
+    CASTLE_WIDTH = 140
+    CASTLE_HEIGHT = 300
+    
+    rc_3 = pygame.image.load("images/red_castle_initial.png").convert_alpha()
+    rc_2 = pygame.image.load("images/red_castle_left_2.png").convert_alpha()
+    rc_1 = pygame.image.load("images/red_castle_left_1.png").convert_alpha()
+    rc_0 = pygame.image.load("images/red_castle_game_over.png").convert_alpha()
+    
+    yc_3 = pygame.image.load("images/yellow_castle_initial.png").convert_alpha()
+    yc_2 = pygame.image.load("images/yellow_castle_left_2.png").convert_alpha()
+    yc_1 = pygame.image.load("images/yellow_castle_left_1.png").convert_alpha()
+    yc_0 = pygame.image.load("images/yellow_castle_game_over.png").convert_alpha()
+    
+    red_castles = [
+        pygame.transform.smoothscale(rc_0, (CASTLE_WIDTH, CASTLE_HEIGHT)),
+        pygame.transform.smoothscale(rc_1, (CASTLE_WIDTH, CASTLE_HEIGHT)),
+        pygame.transform.smoothscale(rc_2, (CASTLE_WIDTH, CASTLE_HEIGHT)),
+        pygame.transform.smoothscale(rc_3, (CASTLE_WIDTH, CASTLE_HEIGHT))
+    ]
+    
+    yellow_castles = [
+        pygame.transform.smoothscale(yc_0, (CASTLE_WIDTH, CASTLE_HEIGHT)),
+        pygame.transform.smoothscale(yc_1, (CASTLE_WIDTH, CASTLE_HEIGHT)),
+        pygame.transform.smoothscale(yc_2, (CASTLE_WIDTH, CASTLE_HEIGHT)),
+        pygame.transform.smoothscale(yc_3, (CASTLE_WIDTH, CASTLE_HEIGHT))
+    ]
+    castles_loaded = True
+except:
+    castles_loaded = False
+    print("Castle images missing, using fallback UI.")
 
 # Variables initialized manually
 board = create_board()
@@ -429,7 +576,7 @@ while True: # Infinity loop structure
             pygame.mixer.music.load(playlist[current_track_index])
             pygame.mixer.music.play(0)
 
-        # F11 function - for fullscreen
+        # F11 & ESC function
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_F11:
                 fullscreen = not fullscreen
@@ -446,12 +593,24 @@ while True: # Infinity loop structure
                     about_bg_image = pygame.transform.smoothscale(original_about_bg_image, (width,height))
                 
                 # Update and adapt to matrix belonging to screen changing
-                if state == "PLAYING":
+                if state == "PLAYING" or state == "PAUSED":
+                    screen.blit(game_bg_image, (0,0))
                     draw_board(board)
                     pygame.display.update()
                 elif state == "ABOUT":
                     screen.blit(about_bg_image, (0,0))
                     pygame.display.update()
+            
+            # ESC logic for Pausing
+            if event.key == pygame.K_ESCAPE:
+                if state == "PLAYING" and not game_over:
+                    if click_sound: click_sound.play()
+                    state = "PAUSED"
+                elif state == "PAUSED":
+                    if click_sound: click_sound.play()
+                    state = "PLAYING"
+                    screen.blit(game_bg_image, (0,0))
+                    draw_board(board)
 
         # State 1 : Main menu
         if state == "MENU":
@@ -459,11 +618,8 @@ while True: # Infinity loop structure
             
             # Fixed sizes for buttons
             draw_button_with_hover(screen, "PLAY", button_font, (width/2 - 100, 200, 200, 60), RED, (255, 100, 100), BLACK)
-            
             draw_button_with_hover(screen, "SETTINGS", button_font, (width/2 - 100, 290, 200, 60), YELLOW, (255, 255, 150), BLACK)
-
             draw_button_with_hover(screen, "ABOUT", button_font, (width/2 - 100, 380, 200, 60), BLUE, (100, 100, 255), BLACK)
-            
             draw_button_with_hover(screen, "QUIT", button_font, (width/2 - 100, 470, 200, 60), (100, 100, 100), (150, 150, 150), BLACK)
             
             pygame.display.update()
@@ -472,14 +628,82 @@ while True: # Infinity loop structure
                 posx, posy = event.pos
                 if (width/2 - 100 <= posx <= width/2 + 100):
                     if (200 <= posy <= 260): 
-                        board, game_over, turn = reset_game() # Reset everything
-                        state = "PLAYING"
+                        if click_sound: click_sound.play()
+                        state = "SETUP"
                     elif (290 <= posy <= 350): 
+                        if click_sound: click_sound.play()
                         state = "SETTINGS"
                     elif (380 <= posy <= 440): 
+                        if click_sound: click_sound.play()
                         state = "ABOUT"
                     elif (470 <= posy <= 530): # Click quit
+                        if click_sound: click_sound.play()
                         state = "QUIT_CONFIRM"
+
+        # State 1.5 : Game Setup
+        elif state == "SETUP":
+            screen.blit(bg_image , (0,0))
+            
+            overlay = pygame.Surface((width, height), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 160)) 
+            screen.blit(overlay, (0, 0))
+            
+            title_shadow = menu_font.render("GAME SETUP", 1, BLACK)
+            screen.blit(title_shadow, (width/2 - title_shadow.get_width()/2 + 4, 64))
+            title = menu_font.render("GAME SETUP", 1, YELLOW)
+            screen.blit(title, (width/2 - title.get_width()/2, 60))
+            
+            # --- MODE SELECTION ---
+            mode_text = button_font.render(f"MODE: {current_game_mode}", 1, WHITE)
+            screen.blit(mode_text, (width/2 - mode_text.get_width()/2, 170))
+            draw_button_with_hover(screen, "<", menu_font, (width/2 - 150, 220, 60, 60), YELLOW, (255, 255, 150), BLACK)
+            draw_button_with_hover(screen, ">", menu_font, (width/2 + 90, 220, 60, 60), YELLOW, (255, 255, 150), BLACK)
+
+            # --- MATCH TYPE SELECTION ---
+            match_text = button_font.render(f"MATCH: {current_match_type}", 1, WHITE)
+            screen.blit(match_text, (width/2 - match_text.get_width()/2, 330))
+            draw_button_with_hover(screen, "<", menu_font, (width/2 - 150, 380, 60, 60), YELLOW, (255, 255, 150), BLACK)
+            draw_button_with_hover(screen, ">", menu_font, (width/2 + 90, 380, 60, 60), YELLOW, (255, 255, 150), BLACK)
+
+            # --- START & BACK BUTTONS ---
+            draw_button_with_hover(screen, "START BATTLE", button_font, (width/2 - 150, 500, 300, 60), GREEN, (50, 255, 50), BLACK)
+            draw_button_with_hover(screen, "BACK", button_font, (width/2 - 100, 580, 200, 60), RED, (255, 100, 100), BLACK)
+            
+            pygame.display.update()
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                posx, posy = event.pos
+                # Mode Logic
+                if (220 <= posy <= 280):
+                    if (width/2 - 150 <= posx <= width/2 - 90):
+                        if click_sound: click_sound.play()
+                        idx = MODES.index(current_game_mode)
+                        current_game_mode = MODES[(idx-1)%len(MODES)]
+                    elif (width/2 + 90 <= posx <= width/2 + 150):
+                        if click_sound: click_sound.play()
+                        idx = MODES.index(current_game_mode)
+                        current_game_mode = MODES[(idx+1)%len(MODES)]
+                # Match Logic
+                elif (380 <= posy <= 440):
+                    if (width/2 - 150 <= posx <= width/2 - 90):
+                        if click_sound: click_sound.play()
+                        idx = MATCH_TYPES.index(current_match_type)
+                        current_match_type = MATCH_TYPES[(idx-1)%len(MATCH_TYPES)]
+                    elif (width/2 + 90 <= posx <= width/2 + 150):
+                        if click_sound: click_sound.play()
+                        idx = MATCH_TYPES.index(current_match_type)
+                        current_match_type = MATCH_TYPES[(idx+1)%len(MATCH_TYPES)]
+                # Start Battle
+                elif (500 <= posy <= 560):
+                    if (width/2 - 150 <= posx <= width/2 + 150):
+                        if click_sound: click_sound.play()
+                        board, game_over, turn = reset_game(full_reset=True)
+                        state = "PLAYING"
+                # Back
+                elif (580 <= posy <= 640):
+                    if (width/2 - 100 <= posx <= width/2 + 100):
+                        if click_sound: click_sound.play()
+                        state = "MENU"
 
         # State 2 : Settings part
         elif state == "SETTINGS":
@@ -534,20 +758,24 @@ while True: # Infinity loop structure
                 # Volume Logic
                 if (150 <= posy <= 210):
                     if (width/2 - 100 <= posx <= width/2 - 40):
+                        if click_sound: click_sound.play()
                         volume_level = max(0.0, volume_level - 0.1)
                         pygame.mixer.music.set_volume(volume_level)
                     elif (width/2 + 40 <= posx <= width/2 + 100):
+                        if click_sound: click_sound.play()
                         volume_level = min(1.0, volume_level + 0.1)
                         pygame.mixer.music.set_volume(volume_level)
                 
                 # Track Logic
                 elif (280 <= posy <= 340):
                     if (width/2 - 100 <= posx <= width/2 - 40):
+                        if click_sound: click_sound.play()
                         current_track_index = (current_track_index - 1) % len(playlist)
                         pygame.mixer.music.load(playlist[current_track_index])
                         pygame.mixer.music.play(0)
                         is_music_paused = False
                     elif (width/2 + 40 <= posx <= width/2 + 100):
+                        if click_sound: click_sound.play()
                         current_track_index = (current_track_index + 1) % len(playlist)
                         pygame.mixer.music.load(playlist[current_track_index])
                         pygame.mixer.music.play(0)
@@ -556,6 +784,7 @@ while True: # Infinity loop structure
                 # Pause Logic
                 elif (360 <= posy <= 420):
                     if (width/2 - 100 <= posx <= width/2 + 100):
+                        if click_sound: click_sound.play()
                         is_music_paused = not is_music_paused
                         if is_music_paused:
                             pygame.mixer.music.pause()
@@ -567,13 +796,16 @@ while True: # Infinity loop structure
                     diffs = list(DIFFICULTY_LEVELS.keys())
                     idx = diffs.index(current_difficulty)
                     if (width/2 - 100 <= posx <= width/2 - 40):
+                        if click_sound: click_sound.play()
                         current_difficulty = diffs[(idx-1)%3]
                     elif (width/2 + 40 <= posx <= width/2 + 100):
+                        if click_sound: click_sound.play()
                         current_difficulty = diffs[(idx+1)%3]
 
                 # Back Logic
                 elif (580 <= posy <= 640):
                     if (width/2 - 100 <= posx <= width/2 + 100):
+                        if click_sound: click_sound.play()
                         state = "MENU"
 
         # State for ABOUT screen
@@ -588,6 +820,7 @@ while True: # Infinity loop structure
             if event.type == pygame.MOUSEBUTTONDOWN:
                 posx, posy = event.pos
                 if (width/2 - 100 <= posx <= width/2 + 100) and (height - 100 <= posy <= height - 40):
+                    if click_sound: click_sound.play()
                     state = "MENU"
 
         # State 3 : Gameplay screen
@@ -606,8 +839,10 @@ while True: # Infinity loop structure
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     posx, posy = event.pos
                     if (width - 130 <= posx <= width - 20) and (30 <= posy <= 70):
-                        board, game_over, turn = reset_game() # Reset everything
+                        if click_sound: click_sound.play()
+                        board, game_over, turn = reset_game(full_reset=True) # Reset everything
                     elif (20 <= posx <= 140) and (30 <= posy <= 70):
+                        if click_sound: click_sound.play()
                         state = "MENU"
                 continue # Skip the loop for other playing processes
 
@@ -615,43 +850,94 @@ while True: # Infinity loop structure
             if event.type == pygame.MOUSEMOTION:
                 screen.blit(game_bg_image, (0,0), (0, 0, width, SQUARESIZE))
                 posx = event.pos[0]
+                
+                # Constrain visual piece within board area
+                if posx < X_OFFSET: posx = X_OFFSET
+                if posx > width - X_OFFSET: posx = width - X_OFFSET
+                
                 if turn == PLAYER:
                     pygame.draw.circle(screen, RED, (posx, int(SQUARESIZE/2)), RADIUS)
+                elif turn == AI and current_match_type == "PVP":
+                    pygame.draw.circle(screen, YELLOW, (posx, int(SQUARESIZE/2)), RADIUS)
+                    
             pygame.display.update()
 
             if event.type == pygame.MOUSEBUTTONDOWN:
-                screen.blit(game_bg_image, (0,0), (0, 0, width, SQUARESIZE))
-                if turn == PLAYER:
+                if turn == PLAYER or (turn == AI and current_match_type == "PVP"):
                     posx = event.pos[0]
-                    col = int(math.floor(posx/SQUARESIZE))
+                    
+                    if X_OFFSET <= posx <= width - X_OFFSET:
+                        screen.blit(game_bg_image, (0,0), (0, 0, width, SQUARESIZE))
+                        col = int(math.floor((posx - X_OFFSET)/SQUARESIZE))
 
-                    if is_valid_location(board, col):
-                        row = get_next_open_row(board, col)
-                        drop_piece(board, row, col, PLAYER_PIECE)
-                        drop_sound.play() # Rock falling effect
-
-                        if winning_move(board, PLAYER_PIECE):
-                            screen.blit(game_bg_image, (0,0), (0, 0, width, SQUARESIZE)) # Clear the top section
-                            label = win_font.render("Player 1 wins!!", 1, RED)
-                            screen.blit(label, (width/2 - label.get_width()/2, 30))
-                            game_over = True
+                        if is_valid_location(board, col):
+                            row = get_next_open_row(board, col)
+                            active_piece = PLAYER_PIECE if turn == PLAYER else AI_PIECE
                             
-                            # --- FINAL LOG: AI DEFEATED ---
-                            final_log = {
-                                "match_status": "GAME_OVER",
-                                "winner": "PLAYER",
-                                "ai_final_status": "DEFEATED",
-                                "total_moves": move_counter - 1,
-                                "final_board": board.tolist(),
-                                "timestamp": str(datetime.now())
-                            }
-                            game_history_log.append(final_log)
-                            with open(current_dataset_file, "w", encoding="utf-8") as outfile:
-                                json.dump(game_history_log, outfile, indent=4, ensure_ascii=False)
+                            drop_piece(board, row, col, active_piece)
+                            if drop_sound:
+                                drop_sound.play() # Rock falling effect
 
-                        turn += 1
-                        turn = turn % 2
+                            if winning_move(board, active_piece):
+                                process_win(active_piece)
+                            else:
+                                turn += 1
+                                turn = turn % 2
+                            draw_board(board)
+
+        # State 3.5 : Paused screen
+        elif state == "PAUSED":
+            screen.blit(game_bg_image, (0,0))
+            
+            for c in range(COLUMN_COUNT):
+                for r in range(ROW_COUNT):
+                    pygame.draw.rect(screen, BLUE, (c*SQUARESIZE + X_OFFSET, r*SQUARESIZE+SQUARESIZE, SQUARESIZE, SQUARESIZE))
+                    pygame.draw.circle(screen, BLACK, (int(c*SQUARESIZE + X_OFFSET + SQUARESIZE/2), int(r*SQUARESIZE+SQUARESIZE+SQUARESIZE/2)), RADIUS)
+            
+            for c in range(COLUMN_COUNT):
+                for r in range(ROW_COUNT):      
+                    if board[r][c] == PLAYER_PIECE:
+                        pygame.draw.circle(screen, RED, (int(c*SQUARESIZE + X_OFFSET + SQUARESIZE/2), height-int(r*SQUARESIZE+SQUARESIZE/2)), RADIUS)
+                    elif board[r][c] == AI_PIECE: 
+                        pygame.draw.circle(screen, YELLOW, (int(c*SQUARESIZE + X_OFFSET + SQUARESIZE/2), height-int(r*SQUARESIZE+SQUARESIZE/2)), RADIUS)
+                        
+            if current_game_mode == "CONQUER":
+                if castles_loaded:
+                    screen.blit(red_castles[p1_towers], (5, height - CASTLE_HEIGHT - 10))
+                    screen.blit(yellow_castles[p2_towers], (width - CASTLE_WIDTH - 5, height - CASTLE_HEIGHT - 10))
+                else:
+                    opponent_short = "AI" if current_match_type == "PVE" else "P2"
+                    p1_txt = top_button_font.render(f"P1: {p1_towers}", 1, RED)
+                    p2_txt = top_button_font.render(f"{opponent_short}: {p2_towers}", 1, YELLOW)
+                    screen.blit(p1_txt, (20, height/2))
+                    screen.blit(p2_txt, (width - X_OFFSET + 20, height/2))
+
+            # Dimming overlay
+            overlay = pygame.Surface((width, height), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 160)) 
+            screen.blit(overlay, (0, 0))
+            
+            title_shadow = menu_font.render("PAUSED", 1, BLACK)
+            screen.blit(title_shadow, (width/2 - title_shadow.get_width()/2 + 4, 154))
+            title = menu_font.render("PAUSED", 1, YELLOW)
+            screen.blit(title, (width/2 - title.get_width()/2, 150))
+            
+            draw_button_with_hover(screen, "CONTINUE", button_font, (width/2 - 150, 300, 300, 60), GREEN, (50, 255, 50), BLACK)
+            draw_button_with_hover(screen, "MAIN MENU", button_font, (width/2 - 150, 390, 300, 60), RED, (255, 100, 100), BLACK)
+            
+            pygame.display.update()
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                posx, posy = event.pos
+                if (width/2 - 150 <= posx <= width/2 + 150):
+                    if (300 <= posy <= 360):
+                        if click_sound: click_sound.play()
+                        state = "PLAYING"
+                        screen.blit(game_bg_image, (0,0))
                         draw_board(board)
+                    elif (390 <= posy <= 450):
+                        if click_sound: click_sound.play()
+                        state = "MENU"
 
         # State 4 : Exit confirmation screen
         elif state == "QUIT_CONFIRM":
@@ -678,20 +964,23 @@ while True: # Infinity loop structure
                 posx, posy = event.pos
                 # YES - Exit Game
                 if (width/2 - 150 <= posx <= width/2 - 30) and (350 <= posy <= 410):
+                    if click_sound: click_sound.play()
                     sys.exit()
                 # NO - Back to Menu
                 elif (width/2 + 30 <= posx <= width/2 + 150) and (350 <= posy <= 410):
+                    if click_sound: click_sound.play()
                     state = "MENU"
 
     # The AI movement logic
-    if state == "PLAYING" and turn == AI and not game_over:                
+    if state == "PLAYING" and turn == AI and not game_over and current_match_type == "PVE":                
         ai_depth = DIFFICULTY_LEVELS[current_difficulty]["depth"]
         col, minimax_score = minimax(board, ai_depth, -math.inf, math.inf, True)
 
         if is_valid_location(board, col):
             row = get_next_open_row(board, col)
             drop_piece(board, row, col, AI_PIECE)
-            drop_sound.play()
+            if drop_sound:
+                drop_sound.play()
 
             # --- EXPLAINABLE AI LOGIC (ENHANCED WITH LOSING STATES) ---
             ai_explanation = ""
@@ -758,24 +1047,9 @@ while True: # Infinity loop structure
             move_counter += 1
 
             if winning_move(board, AI_PIECE):
-                screen.blit(game_bg_image, (0,0), (0, 0, width, SQUARESIZE)) # Clear the top section
-                label = win_font.render("AI wins!!", 1, YELLOW)
-                screen.blit(label, (width/2 - label.get_width()/2, 30))
-                game_over = True
+                process_win(AI_PIECE)
+            else:
+                turn += 1
+                turn = turn % 2
                 
-                # --- FINAL LOG: AI VICTORIOUS ---
-                final_log = {
-                    "match_status": "GAME_OVER",
-                    "winner": "AI_Warrior",
-                    "ai_final_status": "VICTORIOUS",
-                    "total_moves": move_counter - 1,
-                    "final_board": board.tolist(),
-                    "timestamp": str(datetime.now())
-                }
-                game_history_log.append(final_log)
-                with open(current_dataset_file, "w", encoding="utf-8") as outfile:
-                    json.dump(game_history_log, outfile, indent=4, ensure_ascii=False)
-
             draw_board(board)
-            turn += 1
-            turn = turn % 2
