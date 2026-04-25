@@ -38,3 +38,9 @@ env/
 
 #datasets
 datasets/dataset_*.json
+
+#dist
+dist/
+
+#build
+build/

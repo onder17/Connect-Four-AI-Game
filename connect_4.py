@@ -4,25 +4,21 @@ import pygame
 import sys
 import math
 import cv2
-import json
 import csv
 import os
 from datetime import datetime
 
-# Defined list for log processes
-game_history_log = []
 move_counter = 1
 
-# Creating a unique file name
-# Instance output: dataset_20260413_154530.json
 session_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-current_dataset_file = f"datasets/dataset_{session_timestamp}.json"
 
 # -------------------------------------------------------------------
 # CONTINUOUS CSV INTEGRATION
 # Appends to a single CSV file across all sessions.
 # Header row is written automatically if the file does not exist.
 # -------------------------------------------------------------------
+
+#continuous data pipeline for ML training 
 CSV_DIR = "datasets"
 CONTINUOUS_CSV_FILE = os.path.join(CSV_DIR, "continuous_gameplay_log.csv")
 
@@ -95,6 +91,7 @@ MATCH_TYPES = ["PVE", "PVP"]
 current_game_mode = "CONQUER"
 current_match_type = "PVE"
 
+#at the conquer mode
 p1_towers = 3
 p2_towers = 3
 
@@ -143,11 +140,13 @@ def drop_piece(board, row, col, piece):
 def is_valid_location(board, col):
     return board[ROW_COUNT-1][col] == 0
 
+#gravity & matrix mapping
+#drop piece synchronization
 def get_next_open_row(board, col):
     for r in range(ROW_COUNT):
         if board[r][col] == 0:
             return r
-
+#flipping for synchronization the game board
 def print_board(board):
     print(np.flip(board, 0))
 
@@ -179,18 +178,13 @@ def winning_move(board, piece):
     return False
 
 def reset_game(full_reset=True):
-    global game_history_log, move_counter, current_dataset_file, p1_towers, p2_towers, game_number_counter
+    global move_counter, p1_towers, p2_towers, game_number_counter
     
     if full_reset:
         # Reset the list and counter because of new game
-        game_history_log = []
         move_counter = 1
         p1_towers = 3
         p2_towers = 3
-        
-        # Creating new file name for new game
-        session_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        current_dataset_file = f"datasets/dataset_{session_timestamp}.json"
 
         # Increment game number counter within the session when a new game starts
         game_number_counter += 1
@@ -210,13 +204,17 @@ def evaluate_window(window, piece):
     if piece == PLAYER_PIECE:
         opp_piece = AI_PIECE
 
+    #heuristic evaluation table - strategic weight point mechanism
+    #winning situation
     if window.count(piece) == 4:
         score += 100
+    #offensive threat
     elif window.count(piece) == 3 and window.count(EMPTY) == 1:
         score += 5
+    #strategic development process
     elif window.count(piece) == 2 and window.count(EMPTY) == 2:
         score += 2
-
+    #defensive block
     if window.count(opp_piece) == 3 and window.count(EMPTY) == 1:
         score -= 4
 
@@ -226,8 +224,10 @@ def score_position(board, piece):
     score = 0
 
     # Score center column
+    #center column is critical area for winning the game
     center_array = [int(i) for i in list(board[:, COLUMN_COUNT//2])]
     center_count = center_array.count(piece)
+    #assign *3 point for pieces of the center columns
     score += center_count * 3
 
     # Score Horizontal
@@ -240,6 +240,7 @@ def score_position(board, piece):
     # Score Vertical
     for c in range(COLUMN_COUNT):
         col_array = [int(i) for i in list(board[:,c])]
+        #obstruct the memory overflow - boundary & index management
         for r in range(ROW_COUNT-3):
             window = col_array[r:r+WINDOW_LENGTH]
             score += evaluate_window(window, piece)
@@ -256,18 +257,22 @@ def score_position(board, piece):
             score += evaluate_window(window, piece)
 
     return score
-
+#game is over - depends to 3 option:
 def is_terminal_node(board):
     return winning_move(board, PLAYER_PIECE) or winning_move(board, AI_PIECE) or len(get_valid_locations(board)) == 0
 
+#Minimax Algorithm Implementations (w/alpha-beta pruning)
+#main decision mechanism
 def minimax(board, depth, alpha, beta, maximizingPlayer):
     valid_locations = get_valid_locations(board)
     is_terminal = is_terminal_node(board)
     if depth == 0 or is_terminal:
         if is_terminal:
             if winning_move(board, AI_PIECE):
+                #definite victory for ai -> positive infinite value
                 return (None, 100000000000000)
             elif winning_move(board, PLAYER_PIECE):
+                #definite victory for client -> negative infinite value
                 return (None, -10000000000000)
             else: # Game is over, no more valid moves
                 return (None, 0)
@@ -278,17 +283,20 @@ def minimax(board, depth, alpha, beta, maximizingPlayer):
         column = random.choice(valid_locations)
         for col in valid_locations:
             row = get_next_open_row(board, col)
-            b_copy = board.copy()
+            b_copy = board.copy()  #state immutability
             drop_piece(b_copy, row, col, AI_PIECE)
-            new_score = minimax(b_copy, depth-1, alpha, beta, False)[1]
-            if new_score > value:
+            new_score = minimax(b_copy, depth-1, alpha, beta, False)[1] #recursive algorithm
+            if new_score > value: #choose the best one
                 value = new_score
                 column = col
+            #CPU optimization , alpha = best option , beta = worst option
+            #stop scanning
             alpha = max(alpha, value)
             if alpha >= beta:
                 break
         return column, value
 
+    #the human perspective - through the eyes of ai
     else: # Minimizing player
         value = math.inf
         column = random.choice(valid_locations)
@@ -305,6 +313,7 @@ def minimax(board, depth, alpha, beta, maximizingPlayer):
                 break
         return column, value
 
+#action space
 def get_valid_locations(board):
     valid_locations = []
     for col in range(COLUMN_COUNT):
@@ -312,6 +321,7 @@ def get_valid_locations(board):
             valid_locations.append(col)
     return valid_locations
 
+#fallback modular structure for basic structure of the game - depth1
 def pick_best_move(board, piece):
     valid_locations = get_valid_locations(board)
     best_score = -10000
@@ -336,6 +346,7 @@ def write_move_to_csv(player_label, chosen_col, minimax_score_val, ai_exp, board
     global p1_towers, p2_towers, game_number_counter, session_stats
 
     # Flatten the board to a 1D string (42 cells, comma-separated)
+    #feature vector format transformation for ml training
     board_flat_str = ",".join(str(int(cell)) for row in board_state for cell in row)
 
     row_data = {
@@ -407,18 +418,6 @@ def log_final_result(winner_piece):
         return
         
     winner_label = "PLAYER" if winner_piece == PLAYER_PIECE else "AI_Warrior"
-
-    final_log = {
-        "match_status": "GAME_OVER",
-        "winner": winner_label,
-        "ai_final_status": "DEFEATED" if winner_piece == PLAYER_PIECE else "VICTORIOUS",
-        "total_moves": move_counter - 1,
-        "final_board": board.tolist(),
-        "timestamp": str(datetime.now())
-    }
-    game_history_log.append(final_log)
-    with open(current_dataset_file, "w", encoding="utf-8") as outfile:
-        json.dump(game_history_log, outfile, indent=4, ensure_ascii=False)
 
     # Write end-of-game statistics to CSV and print to terminal
     write_game_stats_to_csv(winner_label)
@@ -725,6 +724,7 @@ except pygame.error as e:
     print(f"Main menu music did not upload: {e}")
 
 while True: # Infinity loop structure
+    #FSM - State Management Mechanism
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -1162,7 +1162,7 @@ while True: # Infinity loop structure
             if drop_sound:
                 drop_sound.play()
 
-            # --- EXPLAINABLE AI LOGIC (ENHANCED WITH LOSING STATES) ---
+            # --- EXPLAINABLE AI LOGIC (INCLUDED WITH LOSING STATES) ---
             ai_explanation = ""
             
             if minimax_score > 1000000:
@@ -1205,26 +1205,8 @@ while True: # Infinity loop structure
             print(f">> Minimax Calculated Score: {minimax_score}")
             print(f">> AI Explanation: {ai_explanation}")
             print("-" * 50)
-            
-            # Transforming the board to list - for JSON
-            board_state_list = board.tolist() 
-            move_data = {
-                "move_number": move_counter,
-                "player": "AI_Warrior",
-                "level": current_difficulty,
-                "chosen_column": int(col),
-                "ai_explanation": ai_explanation,
-                "minimax_calculated_score": float(minimax_score),
-                "timestamp": str(datetime.now()),
-                "board_state": board_state_list
-            }
-            game_history_log.append(move_data)
-            
-            # Writing to JSON file
-            with open(current_dataset_file, "w", encoding="utf-8") as outfile:
-                json.dump(game_history_log, outfile, indent=4, ensure_ascii=False)
 
-            # Log the AI move to the continuous CSV file as well
+            # Log the AI move to the continuous CSV file
             write_move_to_csv("AI_Warrior", col, minimax_score, ai_explanation, board)
                 
             move_counter += 1
